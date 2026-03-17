@@ -150,22 +150,6 @@ struct GameDetailView: View {
 
     // MARK: - Formatting
 
-    private func abbreviatedName(_ fullName: String) -> String {
-        let parts = fullName.split(separator: " ")
-        guard let first = parts.first, let last = parts.last, parts.count > 1 else {
-            return fullName
-        }
-        return "\(first.prefix(1)). \(last)"
-    }
-
-    private func formatOPS(_ ops: Double) -> String {
-        if ops >= 1.0 {
-            return String(format: "%.3f OPS", ops)
-        } else {
-            return String(format: ".%03.0f OPS", ops * 1000)
-        }
-    }
-
     private func splitOPSLabel(_ ops: Double?, prefix: String) -> some View {
         VStack(alignment: .trailing, spacing: 1) {
             Text(prefix)
@@ -281,4 +265,19 @@ struct GameDetailView: View {
             }
         }
     }
+}
+
+// MARK: - Previews
+
+#Preview("iPhone – Compact") {
+    NavigationStack {
+        GameDetailView(game: .preview)
+    }
+}
+
+#Preview("iPad – Wide") {
+    NavigationStack {
+        GameDetailView(game: .preview)
+    }
+    .environment(\.horizontalSizeClass, .regular)
 }
