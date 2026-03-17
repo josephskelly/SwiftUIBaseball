@@ -271,15 +271,13 @@ struct GameDetailView: View {
     NavigationStack {
         GameDetailView(game: .preview)
     }
-    .previewInterfaceOrientation(.portrait)
 }
 
-#Preview("iPhone – Landscape") {
+#Preview("iPhone – Landscape", traits: .landscapeLeft) {
     NavigationStack {
         GameDetailView(game: .preview)
     }
     .environment(\.verticalSizeClass, .compact)
-    .previewInterfaceOrientation(.landscapeLeft)
 }
 
 #Preview("iPad – Wide") {
