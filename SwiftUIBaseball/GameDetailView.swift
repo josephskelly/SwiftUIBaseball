@@ -231,7 +231,8 @@ struct GameDetailView: View {
                         if let result = try? await SwiftBaseball
                             .pitcherPlatoonStats(id: entry.id)
                             .season(season)
-                            .fetch() {
+                            .fetch(),
+                           result.vsLeft?.ops != nil || result.vsRight?.ops != nil {
                             pPlatoon = result
                         } else if let result = try? await SwiftBaseball
                             .pitcherPlatoonStats(id: entry.id)
@@ -243,7 +244,8 @@ struct GameDetailView: View {
                         if let result = try? await SwiftBaseball
                             .playerPlatoonStats(id: entry.id)
                             .season(season)
-                            .fetch() {
+                            .fetch(),
+                           result.vsLeft?.ops != nil || result.vsRight?.ops != nil {
                             bPlatoon = result
                         } else if let result = try? await SwiftBaseball
                             .playerPlatoonStats(id: entry.id)
