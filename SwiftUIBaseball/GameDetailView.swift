@@ -22,7 +22,8 @@ struct GameDetailView: View {
     @State private var errorMessage: String?
 
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    private var isWide: Bool { horizontalSizeClass == .regular }
+    @Environment(\.verticalSizeClass)   private var verticalSizeClass
+    private var isWide: Bool { horizontalSizeClass == .regular || verticalSizeClass == .compact }
 
     /// Use the game's own season, falling back to current calendar year.
     private var gameSeason: Int {
@@ -275,6 +276,13 @@ struct GameDetailView: View {
     NavigationStack {
         GameDetailView(game: .preview)
     }
+}
+
+#Preview("iPhone – Landscape") {
+    NavigationStack {
+        GameDetailView(game: .preview)
+    }
+    .environment(\.verticalSizeClass, .compact)
 }
 
 #Preview("iPad – Wide") {
