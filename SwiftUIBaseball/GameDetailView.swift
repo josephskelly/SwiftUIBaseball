@@ -16,8 +16,13 @@ struct GameDetailView: View {
     @State private var homeRoster: [RosterEntry] = []
     @State private var playerStats: [Int: PlayerSeasonStats] = [:]
     @State private var players: [Int: Player] = [:]
+    @State private var batterPlatoon: [Int: PlayerPlatoonStats] = [:]
+    @State private var pitcherPlatoon: [Int: PitcherPlatoonStats] = [:]
     @State private var isLoading = false
     @State private var errorMessage: String?
+
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    private var isWide: Bool { horizontalSizeClass == .regular }
 
     /// Use the game's own season, falling back to current calendar year.
     private var gameSeason: Int {
@@ -103,6 +108,18 @@ struct GameDetailView: View {
 
             Spacer()
 
+            if isWide {
+                HStack(spacing: 14) {
+                    if isPitcher {
+                        splitOPSLabel(pitcherPlatoon[entry.id]?.vsLeft?.ops, prefix: "vL")
+                        splitOPSLabel(pitcherPlatoon[entry.id]?.vsRight?.ops, prefix: "vR")
+                    } else {
+                        splitOPSLabel(batterPlatoon[entry.id]?.vsLeft?.ops, prefix: "vL")
+                        splitOPSLabel(batterPlatoon[entry.id]?.vsRight?.ops, prefix: "vR")
+                    }
+                }
+            }
+
             if isPitcher {
                 if let stats = playerStats[entry.id],
                    let pitching = stats.pitching,
@@ -149,6 +166,19 @@ struct GameDetailView: View {
         }
     }
 
+    private func splitOPSLabel(_ ops: Double?, prefix: String) -> some View {
+        VStack(alignment: .trailing, spacing: 1) {
+            Text(prefix)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            Text(ops.map { formatOPS($0) } ?? "—")
+                .font(.caption)
+                .monospacedDigit()
+                .foregroundStyle(ops == nil ? .tertiary : .secondary)
+        }
+        .frame(width: 52, alignment: .trailing)
+    }
+
     private func handednessLabel(entry: RosterEntry, isPitcher: Bool) -> String {
         guard let player = players[entry.id] else { return "" }
         let hand = isPitcher ? player.pitchHand : player.batSide
@@ -187,14 +217,14 @@ struct GameDetailView: View {
 
     private func loadPlayerStats(for entries: [RosterEntry]) async {
         let season = gameSeason
-        await withTaskGroup(of: (Int, Player?, PlayerSeasonStats?).self) { group in
+        await withTaskGroup(of: (Int, Player?, PlayerSeasonStats?, PlayerPlatoonStats?, PitcherPlatoonStats?).self) { group in
             for entry in entries {
                 let isPitcher = entry.position == .pitcher
                 group.addTask {
                     let statGroup: StatGroup = isPitcher ? .pitching : .batting
                     async let playerResult = SwiftBaseball.player(id: entry.id).fetch()
 
-                    // Try game season first, fall back to previous year
+                    // Season stats — try current season, fall back to previous year
                     var stats: PlayerSeasonStats?
                     if let result = try? await SwiftBaseball
                         .playerStats(id: entry.id)
@@ -210,13 +240,44 @@ struct GameDetailView: View {
                         stats = result
                     }
 
+                    // Platoon splits — try current season, fall back to previous year
+                    var bPlatoon: PlayerPlatoonStats?
+                    var pPlatoon: PitcherPlatoonStats?
+                    if isPitcher {
+                        if let result = try? await SwiftBaseball
+                            .pitcherPlatoonStats(id: entry.id)
+                            .season(season)
+                            .fetch() {
+                            pPlatoon = result
+                        } else if let result = try? await SwiftBaseball
+                            .pitcherPlatoonStats(id: entry.id)
+                            .season(season - 1)
+                            .fetch() {
+                            pPlatoon = result
+                        }
+                    } else {
+                        if let result = try? await SwiftBaseball
+                            .playerPlatoonStats(id: entry.id)
+                            .season(season)
+                            .fetch() {
+                            bPlatoon = result
+                        } else if let result = try? await SwiftBaseball
+                            .playerPlatoonStats(id: entry.id)
+                            .season(season - 1)
+                            .fetch() {
+                            bPlatoon = result
+                        }
+                    }
+
                     let player = try? await playerResult
-                    return (entry.id, player, stats)
+                    return (entry.id, player, stats, bPlatoon, pPlatoon)
                 }
             }
-            for await (id, player, stats) in group {
+            for await (id, player, stats, bPlatoon, pPlatoon) in group {
                 if let player { players[id] = player }
                 if let stats { playerStats[id] = stats }
+                if let bPlatoon { batterPlatoon[id] = bPlatoon }
+                if let pPlatoon { pitcherPlatoon[id] = pPlatoon }
             }
         }
     }
