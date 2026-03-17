@@ -1,0 +1,15 @@
+{
+  "originHash" : "ef2fca56c0ead2e3f635482c82e4e214951409322b8f3c15c08ac8fc0597e855",
+  "pins" : [
+    {
+      "identity" : "swiftbaseball",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/josephskelly/SwiftBaseball.git",
+      "state" : {
+        "branch" : "main",
+        "revision" : "e06f36fa9302854d48ad91224830d002ddc3f112"
+      }
+    }
+  ],
+  "version" : 3
+}

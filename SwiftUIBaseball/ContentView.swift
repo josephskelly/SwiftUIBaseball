@@ -6,61 +6,107 @@
 //
 
 import SwiftUI
-import SwiftData
+import SwiftBaseball
 
 struct ContentView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
+    @State private var games: [ScheduleEntry] = []
+    @State private var isLoading = false
+    @State private var errorMessage: String?
+
+    private var todayString: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: Date())
+    }
 
     var body: some View {
-        NavigationSplitView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                    } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
-                    }
-                }
-                .onDelete(perform: deleteItems)
-            }
-#if os(macOS)
-            .navigationSplitViewColumnWidth(min: 180, ideal: 200)
-#endif
-            .toolbar {
-#if os(iOS)
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
-                }
-#endif
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
+        NavigationStack {
+            Group {
+                if isLoading {
+                    ProgressView("Loading schedule…")
+                } else if let errorMessage {
+                    ContentUnavailableView(
+                        "Unable to Load",
+                        systemImage: "exclamationmark.triangle",
+                        description: Text(errorMessage)
+                    )
+                } else if games.isEmpty {
+                    ContentUnavailableView(
+                        "No Games Today",
+                        systemImage: "calendar.badge.exclamationmark",
+                        description: Text("There are no MLB games scheduled for today.")
+                    )
+                } else {
+                    List(games) { game in
+                        NavigationLink(destination: GameDetailView(game: game)) {
+                            GameRow(game: game)
+                        }
                     }
                 }
             }
-        } detail: {
-            Text("Select an item")
+            .navigationTitle("Today's Games")
+            .task {
+                await loadSchedule()
+            }
+            .refreshable {
+                await loadSchedule()
+            }
         }
     }
 
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
+    private func loadSchedule() async {
+        isLoading = true
+        errorMessage = nil
+        do {
+            games = try await SwiftBaseball.schedule(.date(todayString)).fetch()
+        } catch {
+            errorMessage = error.localizedDescription
         }
+        isLoading = false
     }
+}
 
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(items[index])
+struct GameRow: View {
+    let game: ScheduleEntry
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(game.teams.away.team.name)
+                    .fontWeight(game.teams.away.isWinner == true ? .bold : .regular)
+                Spacer()
+                if let score = game.teams.away.score {
+                    Text("\(score)")
+                        .monospacedDigit()
+                        .fontWeight(game.teams.away.isWinner == true ? .bold : .regular)
+                }
+            }
+            HStack {
+                Text(game.teams.home.team.name)
+                    .fontWeight(game.teams.home.isWinner == true ? .bold : .regular)
+                Spacer()
+                if let score = game.teams.home.score {
+                    Text("\(score)")
+                        .monospacedDigit()
+                        .fontWeight(game.teams.home.isWinner == true ? .bold : .regular)
+                }
+            }
+            HStack {
+                Text(game.status.rawValue)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                if let venue = game.venue {
+                    Text("• \(venue.name)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
         }
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .combine)
     }
 }
 
 #Preview {
     ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
 }
