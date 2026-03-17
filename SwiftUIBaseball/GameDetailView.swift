@@ -152,16 +152,11 @@ struct GameDetailView: View {
     // MARK: - Formatting
 
     private func splitOPSLabel(_ ops: Double?, prefix: String) -> some View {
-        VStack(alignment: .trailing, spacing: 1) {
-            Text(prefix)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-            Text(ops.map { formatOPS($0) } ?? "—")
-                .font(.caption)
-                .monospacedDigit()
-                .foregroundStyle(ops == nil ? .tertiary : .secondary)
-        }
-        .frame(width: 52, alignment: .trailing)
+        Text(ops.map { "\(prefix) \(formatOPS($0))" } ?? "\(prefix) —")
+            .font(.caption)
+            .monospacedDigit()
+            .foregroundStyle(ops == nil ? .tertiary : .secondary)
+            .frame(width: 80, alignment: .trailing)
     }
 
     private func handednessLabel(entry: RosterEntry, isPitcher: Bool) -> String {
