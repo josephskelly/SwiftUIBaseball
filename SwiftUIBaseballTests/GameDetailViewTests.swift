@@ -72,6 +72,48 @@ struct AbbreviatedNameTests {
     }
 }
 
+// MARK: - formatRate
+
+struct FormatRateTests {
+
+    @Test func belowOne() {
+        #expect(formatRate(0.310) == ".310")
+    }
+
+    @Test func exactlyOne() {
+        #expect(formatRate(1.000) == "1.000")
+    }
+
+    @Test func aboveOne() {
+        #expect(formatRate(1.036) == "1.036")
+    }
+
+    @Test func zero() {
+        #expect(formatRate(0.0) == ".000")
+    }
+
+    @Test func leadingZeroPreserved() {
+        #expect(formatRate(0.050) == ".050")
+    }
+}
+
+// MARK: - formatIP
+
+struct FormatIPTests {
+
+    @Test func whole() {
+        #expect(formatIP(162.0) == "162.0")
+    }
+
+    @Test func singleDigitFraction() {
+        #expect(formatIP(5.1) == "5.1")
+    }
+
+    @Test func zero() {
+        #expect(formatIP(0.0) == "0.0")
+    }
+}
+
 // MARK: - StatsCache
 
 struct StatsCacheTests {

@@ -20,6 +20,7 @@ struct GameDetailView: View {
     @State private var pitcherPlatoon: [Int: PitcherPlatoonStats] = [:]
     @State private var isLoading = false
     @State private var errorMessage: String?
+    @State private var selectedRosterEntry: RosterEntry?
 
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.verticalSizeClass)   private var verticalSizeClass
@@ -97,17 +98,32 @@ struct GameDetailView: View {
             if !positionPlayers.isEmpty {
                 Section("Position Players") {
                     ForEach(positionPlayers) { entry in
-                        rosterRow(entry: entry, isPitcher: false)
+                        Button { selectedRosterEntry = entry } label: {
+                            rosterRow(entry: entry, isPitcher: false)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
             }
             if !pitchers.isEmpty {
                 Section("Pitchers") {
                     ForEach(pitchers) { entry in
-                        rosterRow(entry: entry, isPitcher: true)
+                        Button { selectedRosterEntry = entry } label: {
+                            rosterRow(entry: entry, isPitcher: true)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
             }
+        }
+        .sheet(item: $selectedRosterEntry) { entry in
+            PlayerCardView(
+                entry: entry,
+                player: players[entry.id],
+                stats: playerStats[entry.id],
+                batterPlatoon: batterPlatoon[entry.id],
+                pitcherPlatoon: pitcherPlatoon[entry.id]
+            )
         }
     }
 
