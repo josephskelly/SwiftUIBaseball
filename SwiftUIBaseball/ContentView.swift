@@ -55,7 +55,11 @@ struct ContentView: View {
     }
 
     private func loadSchedule() async {
-        isLoading = true
+        // Only show the loading spinner on a cold first load.
+        // Re-appears and background refreshes update the list in place.
+        if games.isEmpty {
+            isLoading = true
+        }
         errorMessage = nil
         do {
             games = try await SwiftBaseball.schedule(.date(todayString)).fetch()
@@ -63,7 +67,10 @@ struct ContentView: View {
             // Refresh task was cancelled (e.g. the refreshable context was torn down);
             // leave existing games/error state intact rather than surfacing a spurious error.
         } catch {
-            errorMessage = error.localizedDescription
+            // Only surface an error if there's nothing to show.
+            if games.isEmpty {
+                errorMessage = error.localizedDescription
+            }
         }
         isLoading = false
     }
