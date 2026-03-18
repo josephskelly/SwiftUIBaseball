@@ -10,7 +10,7 @@ import SwiftBaseball
 
 struct ContentView: View {
     @State private var games: [ScheduleEntry] = []
-    @State private var isLoading = false
+    @State private var isLoading = true
     @State private var errorMessage: String?
 
     private var todayString: String {
