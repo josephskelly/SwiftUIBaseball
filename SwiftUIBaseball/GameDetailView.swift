@@ -231,28 +231,30 @@ struct GameDetailView: View {
             async let homeResult = SwiftBaseball.roster(teamId: homeId, season: gameSeason).fetch()
             awayRoster = try await awayResult
             homeRoster = try await homeResult
-
-            // Fetch stats for all rostered players concurrently
-            let allEntries = awayRoster + homeRoster
-            await loadPlayerStats(for: allEntries)
-
-            // Store results so re-visits are instant.
-            await StatsCache.shared.set(
-                StatsCache.Entry(
-                    awayRoster: awayRoster,
-                    homeRoster: homeRoster,
-                    players: players,
-                    playerStats: playerStats,
-                    batterPlatoon: batterPlatoon,
-                    pitcherPlatoon: pitcherPlatoon
-                ),
-                for: game.id
-            )
         } catch {
             errorMessage = error.localizedDescription
+            isLoading = false
+            return
         }
 
+        // Roster is ready — show the list now. Stats load in the background.
         isLoading = false
+
+        let allEntries = awayRoster + homeRoster
+        await loadPlayerStats(for: allEntries)
+
+        // Cache after stats are complete so re-visits are instant and fully populated.
+        await StatsCache.shared.set(
+            StatsCache.Entry(
+                awayRoster: awayRoster,
+                homeRoster: homeRoster,
+                players: players,
+                playerStats: playerStats,
+                batterPlatoon: batterPlatoon,
+                pitcherPlatoon: pitcherPlatoon
+            ),
+            for: game.id
+        )
     }
 
     private func loadPlayerStats(for entries: [RosterEntry]) async {
