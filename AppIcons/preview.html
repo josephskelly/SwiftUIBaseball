@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Baseball App Icon Concepts</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
+      background: #1C1C1E;
+      color: #F2F2F7;
+      padding: 40px 32px 60px;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-bottom: 6px;
+    }
+    .subtitle {
+      font-size: 15px;
+      color: #8E8E93;
+      margin-bottom: 48px;
+    }
+
+    .section-title {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: #636366;
+      margin-bottom: 20px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      margin-bottom: 56px;
+    }
+
+    .card {
+      background: #2C2C2E;
+      border-radius: 20px;
+      overflow: hidden;
+      border: 1px solid #3A3A3C;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+    }
+
+    .icon-wrap {
+      padding: 28px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* Simulate iOS rounded-rect mask at 256px */
+    .icon-wrap img,
+    .icon-wrap object {
+      width: 256px;
+      height: 256px;
+      border-radius: 57px;   /* ~22% of 256 = iOS squircle approx */
+      display: block;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    }
+
+    .card-info {
+      padding: 0 20px 20px;
+    }
+    .card-name {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .card-desc {
+      font-size: 13px;
+      color: #8E8E93;
+      line-height: 1.4;
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid #3A3A3C;
+      margin: 0 0 48px;
+    }
+
+    /* Small "flat" preview strip at bottom */
+    .strip {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .strip-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    .strip-item img {
+      width: 60px;
+      height: 60px;
+      border-radius: 13px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    }
+    .strip-label {
+      font-size: 10px;
+      color: #636366;
+      text-align: center;
+    }
+
+    footer {
+      margin-top: 56px;
+      font-size: 12px;
+      color: #48484A;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Baseball App Icon Concepts</h1>
+  <p class="subtitle">6 options across two styles — open in browser to preview with iOS squircle mask</p>
+
+  <!-- ── PIXEL ART ─────────────────────────────────────────── -->
+  <p class="section-title">Pixel Art</p>
+  <div class="grid">
+
+    <div class="card">
+      <div class="icon-wrap">
+        <img src="pixel_classic.svg" alt="Pixel Classic">
+      </div>
+      <div class="card-info">
+        <div class="card-name">Classic</div>
+        <div class="card-desc">Off-white background, cream ball, dark outline, warm red stitching. Clean and timeless.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="icon-wrap" style="background:#080E18;">
+        <img src="pixel_retro.svg" alt="Pixel Retro">
+      </div>
+      <div class="card-info">
+        <div class="card-name">Retro Dark</div>
+        <div class="card-desc">Deep navy gradient background, ivory ball, bright red stitching. Arcade/retro gaming energy.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="icon-wrap" style="background:#253D14;">
+        <img src="pixel_stadium.svg" alt="Pixel Stadium">
+      </div>
+      <div class="card-info">
+        <div class="card-name">Stadium</div>
+        <div class="card-desc">Outfield green gradient, crisp white ball, deep crimson stitching. Feels like game day.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <hr class="divider">
+
+  <!-- ── SUMI-E / CALLIGRAPHY ──────────────────────────────── -->
+  <p class="section-title">Japanese Calligraphy / Sumi-e</p>
+  <div class="grid">
+
+    <div class="card">
+      <div class="icon-wrap" style="background:#F5EDDB;">
+        <img src="sumi_enso.svg" alt="Sumi Enso">
+      </div>
+      <div class="card-info">
+        <div class="card-name">Enso</div>
+        <div class="card-desc">Open Zen circle — gap at the top, cream washi paper, minimal red seams. Meditative and understated.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="icon-wrap" style="background:#FAFAF5;">
+        <img src="sumi_bold.svg" alt="Sumi Bold">
+      </div>
+      <div class="card-info">
+        <div class="card-name">Bold Sumi</div>
+        <div class="card-desc">Full circle with heavy brushwork, gradient ball fill, bold red stitching with tick marks. Strong and graphic.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="icon-wrap" style="background:#F0E6D0;">
+        <img src="sumi_inkwash.svg" alt="Sumi Ink Wash">
+      </div>
+      <div class="card-info">
+        <div class="card-name">Ink Wash</div>
+        <div class="card-desc">Suiboku-style sphere with gestural brushstroke outline, aged paper background, delicate red seams. Expressive and painterly.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <hr class="divider">
+
+  <!-- ── SMALL SIZE STRIP ──────────────────────────────────── -->
+  <p class="section-title">At Small Sizes (60pt — iPhone home screen)</p>
+  <div class="strip">
+    <div class="strip-item">
+      <img src="pixel_classic.svg" alt="Classic small">
+      <span class="strip-label">Classic</span>
+    </div>
+    <div class="strip-item">
+      <img src="pixel_retro.svg" alt="Retro small" style="background:#080E18;">
+      <span class="strip-label">Retro</span>
+    </div>
+    <div class="strip-item">
+      <img src="pixel_stadium.svg" alt="Stadium small" style="background:#253D14;">
+      <span class="strip-label">Stadium</span>
+    </div>
+    <div class="strip-item">
+      <img src="sumi_enso.svg" alt="Enso small" style="background:#F5EDDB;">
+      <span class="strip-label">Enso</span>
+    </div>
+    <div class="strip-item">
+      <img src="sumi_bold.svg" alt="Bold small" style="background:#FAFAF5;">
+      <span class="strip-label">Bold</span>
+    </div>
+    <div class="strip-item">
+      <img src="sumi_inkwash.svg" alt="Wash small" style="background:#F0E6D0;">
+      <span class="strip-label">Wash</span>
+    </div>
+  </div>
+
+  <footer>SwiftUIBaseball · AppIcons · 2026</footer>
+
+</body>
+</html>

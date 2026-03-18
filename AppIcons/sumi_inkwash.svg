@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <title>Sumi Baseball — Ink Wash</title>
+  <defs>
+    <filter id="ink" x="-8%" y="-8%" width="116%" height="116%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="4" seed="3" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="7"
+          xChannelSelector="R" yChannelSelector="G" result="rough"/>
+      <feGaussianBlur in="rough" stdDeviation="1.5"/>
+    </filter>
+    <filter id="paper" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.72" numOctaves="4"
+          stitchTiles="stitch" result="noise"/>
+      <feColorMatrix type="saturate" values="0" in="noise" result="grayNoise"/>
+      <feBlend in="SourceGraphic" in2="grayNoise" mode="multiply"/>
+    </filter>
+    <filter id="wash" x="-12%" y="-12%" width="124%" height="124%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="4"
+          seed="11" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="26"
+          xChannelSelector="R" yChannelSelector="G" result="rough"/>
+      <feGaussianBlur in="rough" stdDeviation="4"/>
+    </filter>
+    <!-- Ink wash radial: dark edge, lighter inside like a sumi sphere -->
+    <radialGradient id="washGrad" cx="40%" cy="36%" r="62%">
+      <stop offset="0%"  stop-color="#D0C8B8" stop-opacity="0.55"/>
+      <stop offset="55%" stop-color="#A09888" stop-opacity="0.40"/>
+      <stop offset="100%" stop-color="#605848" stop-opacity="0.30"/>
+    </radialGradient>
+    <!-- Subtle vignette around edges -->
+    <radialGradient id="vignette" cx="50%" cy="50%" r="50%">
+      <stop offset="70%" stop-color="#F2E8D5" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#C8B89A" stop-opacity="0.35"/>
+    </radialGradient>
+  </defs>
+  <!-- Aged paper background -->
+  <rect width="1024" height="1024" fill="#F0E6D0"/>
+  <rect width="1024" height="1024" fill="#F0E6D0" filter="url(#paper)" opacity="0.45"/>
+
+  <!-- Ink wash sphere  -->
+  <circle cx="512" cy="512" r="448" fill="url(#washGrad)" filter="url(#wash)"/>
+
+  <!-- Gestural brushstroke circle — irregular, expressive, thick-to-thin -->
+  <!-- Primary stroke -->
+  <path d="M 518,66 C 680,60 900,210 958,430 C 1010,640 908,870 710,946
+           C 510,1020 258,944 130,744 C 2,544 88,260 288,120 C 388,52 428,60 518,66"
+        fill="none" stroke="#0E0A05" stroke-width="46"
+        stroke-linecap="round" stroke-linejoin="round"
+        filter="url(#wash)"/>
+  <!-- Secondary accent at top-right where brush lifts -->
+  <path d="M 518,66 C 630,62 780,110 862,228"
+        fill="none" stroke="#1C1408" stroke-width="24"
+        stroke-linecap="round" opacity="0.65" filter="url(#ink)"/>
+
+  <!-- Vignette layer -->
+  <rect width="1024" height="1024" fill="url(#vignette)"/>
+
+  <!-- Delicate red seams -->
+  <path d="M 460,78 C 308,218 295,392 445,512 C 588,632 572,802 460,946" fill="none" stroke="#A80E00" stroke-width="12"
+        stroke-linecap="round" filter="url(#ink)"/>
+  <path d="M 564,78 C 716,218 729,392 579,512 C 436,632 452,802 564,946" fill="none" stroke="#A80E00" stroke-width="12"
+        stroke-linecap="round" filter="url(#ink)"/>
+
+  <!-- Fine stitch ticks -->
+  <line x1="378.3" y1="139.3" x2="397.7" y2="156.7" stroke="#A80E00" stroke-width="8" stroke-linecap="round"/>
+  <line x1="320.2" y1="255.1" x2="323.8" y2="280.9" stroke="#A80E00" stroke-width="8" stroke-linecap="round"/>
+  <line x1="305.3" y1="406.7" x2="310.7" y2="381.3" stroke="#A80E00" stroke-width="8" stroke-linecap="round"/>
+  <line x1="401.5" y1="473.3" x2="414.5" y2="450.7" stroke="#A80E00" stroke-width="8" stroke-linecap="round"/>
+  <line x1="475.9" y1="550.5" x2="488.1" y2="573.5" stroke="#A80E00" stroke-width="8" stroke-linecap="round"/>
+  <line x1="567.3" y1="663.3" x2="572.7" y2="688.7" stroke="#A80E00" stroke-width="8" stroke-linecap="round"/>
+  <line x1="554.0" y1="812.4" x2="562.0" y2="787.6" stroke="#A80E00" stroke-width="8" stroke-linecap="round"/>
+  <line x1="482.5" y1="894.6" x2="497.5" y2="873.4" stroke="#A80E00" stroke-width="8" stroke-linecap="round"/>
+  <line x1="626.3" y1="156.7" x2="645.7" y2="139.3" stroke="#A80E00" stroke-width="8" stroke-linecap="round"/>
+  <line x1="700.2" y1="280.9" x2="703.8" y2="255.1" stroke="#A80E00" stroke-width="8" stroke-linecap="round"/>
+  <line x1="713.3" y1="381.3" x2="718.7" y2="406.7" stroke="#A80E00" stroke-width="8" stroke-linecap="round"/>
+  <line x1="609.5" y1="450.7" x2="622.5" y2="473.3" stroke="#A80E00" stroke-width="8" stroke-linecap="round"/>
+  <line x1="535.9" y1="573.5" x2="548.1" y2="550.5" stroke="#A80E00" stroke-width="8" stroke-linecap="round"/>
+  <line x1="451.3" y1="688.7" x2="456.7" y2="663.3" stroke="#A80E00" stroke-width="8" stroke-linecap="round"/>
+  <line x1="462.0" y1="787.6" x2="470.0" y2="812.4" stroke="#A80E00" stroke-width="8" stroke-linecap="round"/>
+  <line x1="526.5" y1="873.4" x2="541.5" y2="894.6" stroke="#A80E00" stroke-width="8" stroke-linecap="round"/>
+</svg>
