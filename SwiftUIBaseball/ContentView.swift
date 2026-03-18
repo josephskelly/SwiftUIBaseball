@@ -69,41 +69,20 @@ struct ContentView: View {
     }
 }
 
+/// A spoiler-free row displaying two team names, game status, and venue.
+/// Scores and winner indicators are intentionally omitted.
 struct GameRow: View {
     let game: ScheduleEntry
-
-    /// True only when this team won outright (not a tie).
-    /// The MLB API sets isWinner=true for both teams on a tied game,
-    /// so we require exactly one winner before applying bold.
-    private var awayWonOutright: Bool {
-        game.teams.away.isWinner == true && game.teams.home.isWinner != true
-    }
-
-    private var homeWonOutright: Bool {
-        game.teams.home.isWinner == true && game.teams.away.isWinner != true
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text(game.teams.away.team.name)
-                    .fontWeight(awayWonOutright ? .bold : .regular)
                 Spacer()
-                if let score = game.teams.away.score {
-                    Text("\(score)")
-                        .monospacedDigit()
-                        .fontWeight(awayWonOutright ? .bold : .regular)
-                }
             }
             HStack {
                 Text(game.teams.home.team.name)
-                    .fontWeight(homeWonOutright ? .bold : .regular)
                 Spacer()
-                if let score = game.teams.home.score {
-                    Text("\(score)")
-                        .monospacedDigit()
-                        .fontWeight(homeWonOutright ? .bold : .regular)
-                }
             }
             HStack {
                 Text(game.status.rawValue)
