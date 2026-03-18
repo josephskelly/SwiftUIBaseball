@@ -59,6 +59,9 @@ struct ContentView: View {
         errorMessage = nil
         do {
             games = try await SwiftBaseball.schedule(.date(todayString)).fetch()
+        } catch is CancellationError {
+            // Refresh task was cancelled (e.g. the refreshable context was torn down);
+            // leave existing games/error state intact rather than surfacing a spurious error.
         } catch {
             errorMessage = error.localizedDescription
         }
