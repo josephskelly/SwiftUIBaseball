@@ -100,6 +100,7 @@ struct GameDetailView: View {
                     ForEach(positionPlayers) { entry in
                         Button { selectedRosterEntry = entry } label: {
                             rosterRow(entry: entry, isPitcher: false)
+                                .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                     }
@@ -110,6 +111,7 @@ struct GameDetailView: View {
                     ForEach(pitchers) { entry in
                         Button { selectedRosterEntry = entry } label: {
                             rosterRow(entry: entry, isPitcher: true)
+                                .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                     }
