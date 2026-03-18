@@ -69,6 +69,18 @@ struct ContentView: View {
     }
 }
 
+private extension GameStatus {
+    /// Display label for use in the UI.
+    /// All terminal states (final, completed early, game over) collapse to "Final"
+    /// so the presentation is consistent regardless of how the game ended.
+    var displayText: String {
+        switch self {
+        case .final, .completedEarly, .gameOver: "Final"
+        default: rawValue
+        }
+    }
+}
+
 /// A spoiler-free row displaying two team names, game status, and venue.
 /// Scores and winner indicators are intentionally omitted.
 struct GameRow: View {
@@ -85,7 +97,7 @@ struct GameRow: View {
                 Spacer()
             }
             HStack {
-                Text(game.status.rawValue)
+                Text(game.status.displayText)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 if let venue = game.venue {
