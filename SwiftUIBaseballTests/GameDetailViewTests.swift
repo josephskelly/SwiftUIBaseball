@@ -4,6 +4,7 @@
 //
 
 import Testing
+import SwiftBaseball
 @testable import SwiftUIBaseball
 
 // MARK: - formatOPS
@@ -68,5 +69,46 @@ struct AbbreviatedNameTests {
 
     @Test func emptyString() {
         #expect(abbreviatedName("") == "")
+    }
+}
+
+// MARK: - StatsCache
+
+struct StatsCacheTests {
+
+    /// A minimal empty cache entry for use in tests.
+    private static let emptyEntry = StatsCache.Entry(
+        awayRoster: [],
+        homeRoster: [],
+        players: [:],
+        playerStats: [:],
+        batterPlatoon: [:],
+        pitcherPlatoon: [:]
+    )
+
+    @Test func returnsNilForUnknownKey() async {
+        let cache = StatsCache()
+        #expect(await cache.entry(for: 99999) == nil)
+    }
+
+    @Test func storesAndRetrievesEntry() async {
+        let cache = StatsCache()
+        await cache.set(Self.emptyEntry, for: 1)
+        let retrieved = await cache.entry(for: 1)
+        #expect(retrieved != nil)
+    }
+
+    @Test func differentKeysAreIndependent() async {
+        let cache = StatsCache()
+        await cache.set(Self.emptyEntry, for: 1)
+        #expect(await cache.entry(for: 1) != nil)
+        #expect(await cache.entry(for: 2) == nil)
+    }
+
+    @Test func overwritesExistingEntry() async {
+        let cache = StatsCache()
+        await cache.set(Self.emptyEntry, for: 7)
+        await cache.set(Self.emptyEntry, for: 7)
+        #expect(await cache.entry(for: 7) != nil)
     }
 }

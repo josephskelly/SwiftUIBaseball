@@ -8,6 +8,7 @@ A SwiftUI app that displays live MLB schedule data and roster information using 
 - Game detail view with away/home roster tabs
 - Per-player OPS stats (batting or pitching) for the current season, with prior-season fallback
 - Handedness indicator (L / R / S) for batters and pitchers
+- In-memory stats cache: re-visiting a game detail is instant (no network round-trips)
 
 ## Requirements
 
@@ -72,7 +73,10 @@ SwiftUIBaseball/
 ├── SwiftUIBaseball/
 │   ├── SwiftUIBaseballApp.swift   # App entry point, SwiftData container setup
 │   ├── ContentView.swift          # Today's schedule list
-│   └── GameDetailView.swift       # Roster + player stats per game
+│   ├── GameDetailView.swift       # Roster + player stats per game
+│   ├── StatsCache.swift           # In-memory actor cache (keyed by gamePk)
+│   ├── Formatters.swift           # OPS formatting, name abbreviation helpers
+│   └── PreviewHelpers.swift       # Mock data for SwiftUI previews
 ├── SwiftUIBaseballTests/          # Unit tests
 └── SwiftUIBaseballUITests/        # UI tests
 ```

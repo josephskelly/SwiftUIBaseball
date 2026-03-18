@@ -173,6 +173,17 @@ struct GameDetailView: View {
     // MARK: - Data Loading
 
     private func loadRosters() async {
+        // Warm path: return immediately from cache.
+        if let cached = await StatsCache.shared.entry(for: game.id) {
+            awayRoster    = cached.awayRoster
+            homeRoster    = cached.homeRoster
+            players       = cached.players
+            playerStats   = cached.playerStats
+            batterPlatoon = cached.batterPlatoon
+            pitcherPlatoon = cached.pitcherPlatoon
+            return
+        }
+
         isLoading = true
         errorMessage = nil
 
@@ -188,6 +199,19 @@ struct GameDetailView: View {
             // Fetch stats for all rostered players concurrently
             let allEntries = awayRoster + homeRoster
             await loadPlayerStats(for: allEntries)
+
+            // Store results so re-visits are instant.
+            await StatsCache.shared.set(
+                StatsCache.Entry(
+                    awayRoster: awayRoster,
+                    homeRoster: homeRoster,
+                    players: players,
+                    playerStats: playerStats,
+                    batterPlatoon: batterPlatoon,
+                    pitcherPlatoon: pitcherPlatoon
+                ),
+                for: game.id
+            )
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -202,52 +226,38 @@ struct GameDetailView: View {
                 let isPitcher = entry.position == .pitcher
                 group.addTask {
                     let statGroup: StatGroup = isPitcher ? .pitching : .batting
-                    async let playerResult = SwiftBaseball.player(id: entry.id).fetch()
 
-                    // Season stats — try current season, fall back to previous year
-                    var stats: PlayerSeasonStats?
-                    if let result = try? await SwiftBaseball
-                        .playerStats(id: entry.id)
-                        .season(season)
-                        .group(statGroup)
-                        .fetch().first {
-                        stats = result
-                    } else if let result = try? await SwiftBaseball
-                        .playerStats(id: entry.id)
-                        .season(season - 1)
-                        .group(statGroup)
-                        .fetch().first {
-                        stats = result
-                    }
+                    // Bio and season stats for both years fire in parallel.
+                    async let playerResult  = SwiftBaseball.player(id: entry.id).fetch()
+                    async let statsNow      = SwiftBaseball.playerStats(id: entry.id).season(season).group(statGroup).fetch()
+                    async let statsPrev     = SwiftBaseball.playerStats(id: entry.id).season(season - 1).group(statGroup).fetch()
 
-                    // Platoon splits — try current season, fall back to previous year
+                    let statsNowArr  = try? await statsNow
+                    let statsPrevArr = try? await statsPrev
+                    let stats        = statsNowArr?.first ?? statsPrevArr?.first
+
+                    // Platoon splits for both years fire in parallel, typed by position.
                     var bPlatoon: PlayerPlatoonStats?
                     var pPlatoon: PitcherPlatoonStats?
                     if isPitcher {
-                        if let result = try? await SwiftBaseball
-                            .pitcherPlatoonStats(id: entry.id)
-                            .season(season)
-                            .fetch(),
-                           result.vsLeft?.ops != nil || result.vsRight?.ops != nil {
-                            pPlatoon = result
-                        } else if let result = try? await SwiftBaseball
-                            .pitcherPlatoonStats(id: entry.id)
-                            .season(season - 1)
-                            .fetch() {
-                            pPlatoon = result
+                        async let pitcherNow  = SwiftBaseball.pitcherPlatoonStats(id: entry.id).season(season).fetch()
+                        async let pitcherPrev = SwiftBaseball.pitcherPlatoonStats(id: entry.id).season(season - 1).fetch()
+                        let pNow  = try? await pitcherNow
+                        let pPrev = try? await pitcherPrev
+                        if let pNow, pNow.vsLeft?.ops != nil || pNow.vsRight?.ops != nil {
+                            pPlatoon = pNow
+                        } else {
+                            pPlatoon = pPrev
                         }
                     } else {
-                        if let result = try? await SwiftBaseball
-                            .playerPlatoonStats(id: entry.id)
-                            .season(season)
-                            .fetch(),
-                           result.vsLeft?.ops != nil || result.vsRight?.ops != nil {
-                            bPlatoon = result
-                        } else if let result = try? await SwiftBaseball
-                            .playerPlatoonStats(id: entry.id)
-                            .season(season - 1)
-                            .fetch() {
-                            bPlatoon = result
+                        async let batterNow  = SwiftBaseball.playerPlatoonStats(id: entry.id).season(season).fetch()
+                        async let batterPrev = SwiftBaseball.playerPlatoonStats(id: entry.id).season(season - 1).fetch()
+                        let bNow  = try? await batterNow
+                        let bPrev = try? await batterPrev
+                        if let bNow, bNow.vsLeft?.ops != nil || bNow.vsRight?.ops != nil {
+                            bPlatoon = bNow
+                        } else {
+                            bPlatoon = bPrev
                         }
                     }
 
