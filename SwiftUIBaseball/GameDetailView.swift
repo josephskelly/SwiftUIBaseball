@@ -86,8 +86,12 @@ struct GameDetailView: View {
     @ViewBuilder
     private func rosterList(for side: TeamSide) -> some View {
         let roster = side == .away ? awayRoster : homeRoster
-        let pitchers = roster.filter { $0.position == .pitcher }
-        let positionPlayers = roster.filter { $0.position != .pitcher }
+        let pitchers = roster
+            .filter { $0.position == .pitcher }
+            .sorted { lastName($0) < lastName($1) }
+        let positionPlayers = roster
+            .filter { $0.position != .pitcher }
+            .sorted { lastName($0) < lastName($1) }
 
         List {
             if !positionPlayers.isEmpty {
@@ -166,6 +170,11 @@ struct GameDetailView: View {
             .monospacedDigit()
             .foregroundStyle(ops == nil ? .tertiary : .secondary)
             .frame(width: 80, alignment: .trailing)
+    }
+
+    /// Returns the last whitespace-delimited word of a player's full name.
+    private func lastName(_ entry: RosterEntry) -> String {
+        entry.person.fullName.split(separator: " ").last.map(String.init) ?? entry.person.fullName
     }
 
     private func handednessLabel(entry: RosterEntry, isPitcher: Bool) -> String {
