@@ -5,6 +5,11 @@ import ~/.claude/CLAUDE_SWIFT_DEVELOPER.md
 ## Project Dependencies
 
 - Use the swift package, [SwiftBaseball](https://github.com/josephskelly/SwiftBaseball.git), to fetch MLB stats.
+- After pushing any changes to the SwiftBaseball repo, run the following in SwiftUIBaseball to advance Package.resolved to the new commit:
+  ```bash
+  xcodebuild -resolvePackageDependencies -project /Users/joe/Developer/SwiftUIBaseball/SwiftUIBaseball.xcodeproj
+  ```
+  Then commit and push the updated Package.resolved.
 
 ## Required Workflow After Every Code Change
 
