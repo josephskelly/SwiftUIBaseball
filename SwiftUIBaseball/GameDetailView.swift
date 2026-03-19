@@ -181,7 +181,7 @@ struct GameDetailView: View {
             Text(handednessLabel(entry: entry, isPitcher: isPitcher))
                 .font(.caption)
                 .foregroundStyle(.secondary)
-                .frame(width: 20, alignment: .trailing)
+                .frame(width: 30, alignment: .trailing)
         }
         .accessibilityElement(children: .combine)
     }
@@ -212,7 +212,7 @@ struct GameDetailView: View {
                 sortButton("OPS", field: .ops)
 
                 sortButton("H", field: .hand)
-                    .frame(width: 20, alignment: .trailing)
+                    .frame(width: 30, alignment: .trailing)
             }
         }
         .font(.caption.weight(.semibold))
