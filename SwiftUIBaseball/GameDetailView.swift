@@ -158,25 +158,28 @@ struct GameDetailView: View {
                 }
             }
 
-            if isPitcher {
-                if let stats = playerStats[entry.id],
-                   let pitching = stats.pitching,
-                   let ops = pitching.ops {
-                    Text(formatOPS(ops))
-                        .font(.caption)
-                        .monospacedDigit()
-                        .foregroundStyle(.secondary)
-                }
-            } else {
-                if let stats = playerStats[entry.id],
-                   let batting = stats.batting,
-                   let ops = batting.ops {
-                    Text(formatOPS(ops))
-                        .font(.caption)
-                        .monospacedDigit()
-                        .foregroundStyle(.secondary)
+            Group {
+                if isPitcher {
+                    if let stats = playerStats[entry.id],
+                       let pitching = stats.pitching,
+                       let ops = pitching.ops {
+                        Text(formatOPS(ops))
+                            .font(.caption)
+                            .monospacedDigit()
+                            .foregroundStyle(.secondary)
+                    }
+                } else {
+                    if let stats = playerStats[entry.id],
+                       let batting = stats.batting,
+                       let ops = batting.ops {
+                        Text(formatOPS(ops))
+                            .font(.caption)
+                            .monospacedDigit()
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
+            .frame(width: 70, alignment: .trailing)
 
             Text(handednessLabel(entry: entry, isPitcher: isPitcher))
                 .font(.caption)
@@ -210,6 +213,7 @@ struct GameDetailView: View {
                 }
 
                 sortButton("OPS", field: .ops)
+                    .frame(width: 70, alignment: .trailing)
 
                 sortButton("H", field: .hand)
                     .frame(width: 30, alignment: .trailing)
