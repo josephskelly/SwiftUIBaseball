@@ -12,32 +12,32 @@ import SwiftBaseball
 struct FormatOPSTests {
 
     @Test func belowOne() {
-        #expect(formatOPS(0.850) == ".850 OPS")
+        #expect(formatOPS(0.850) == ".850")
     }
 
     @Test func exactlyOne() {
-        #expect(formatOPS(1.000) == "1.000 OPS")
+        #expect(formatOPS(1.000) == "1.000")
     }
 
     @Test func aboveOne() {
-        #expect(formatOPS(1.036) == "1.036 OPS")
+        #expect(formatOPS(1.036) == "1.036")
     }
 
     @Test func zero() {
-        #expect(formatOPS(0.0) == ".000 OPS")
+        #expect(formatOPS(0.0) == ".000")
     }
 
     @Test func leadingZeroPreserved() {
-        // .050 should not become ".50 OPS"
-        #expect(formatOPS(0.050) == ".050 OPS")
+        // .050 should not become ".50"
+        #expect(formatOPS(0.050) == ".050")
     }
 
     @Test func nearBoundary() {
-        #expect(formatOPS(0.999) == ".999 OPS")
+        #expect(formatOPS(0.999) == ".999")
     }
 
     @Test func eliteOPS() {
-        #expect(formatOPS(1.116) == "1.116 OPS")
+        #expect(formatOPS(1.116) == "1.116")
     }
 }
 
