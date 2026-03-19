@@ -29,8 +29,6 @@ actor StatsCache {
         let batterPlatoon: [Int: PlayerPlatoonStats]
         /// Pitcher platoon splits keyed by player ID.
         let pitcherPlatoon: [Int: PitcherPlatoonStats]
-        /// Statcast batted-ball data keyed by player ID (batters only).
-        let statcastBatting: [Int: StatcastBatting]
     }
 
     private var cache: [Int: Entry] = [:]

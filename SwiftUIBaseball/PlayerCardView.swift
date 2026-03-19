@@ -25,9 +25,10 @@ struct PlayerCardView: View {
     let batterPlatoon: PlayerPlatoonStats?
     /// Pitcher platoon splits (pitchers only), if available.
     let pitcherPlatoon: PitcherPlatoonStats?
-    /// Statcast batted-ball data (batters only), if available.
-    let statcast: StatcastBatting?
+    /// The season year used to fetch Statcast data on demand.
+    let season: Int
 
+    @State private var statcast: StatcastBatting?
     @Environment(\.dismiss) private var dismiss
 
     private var isPitcher: Bool { entry.position == .pitcher }
@@ -65,7 +66,19 @@ struct PlayerCardView: View {
                     Button("Done") { dismiss() }
                 }
             }
+            .task { await loadStatcast() }
         }
+    }
+
+    // MARK: - Data Loading
+
+    /// Fetches Statcast batted-ball data for position players on card appear.
+    private func loadStatcast() async {
+        guard !isPitcher else { return }
+        statcast = try? await SwiftBaseball
+            .statcastBatting(playerId: entry.id)
+            .season(season)
+            .fetch()
     }
 
     // MARK: - Header
@@ -393,7 +406,7 @@ struct PlayerCardView: View {
         stats: .previewBatting,
         batterPlatoon: .preview,
         pitcherPlatoon: nil,
-        statcast: .preview
+        season: 2024
     )
 }
 
@@ -404,7 +417,7 @@ struct PlayerCardView: View {
         stats: .previewPitching,
         batterPlatoon: nil,
         pitcherPlatoon: .preview,
-        statcast: nil
+        season: 2023
     )
 }
 
@@ -415,7 +428,7 @@ struct PlayerCardView: View {
         stats: nil,
         batterPlatoon: nil,
         pitcherPlatoon: nil,
-        statcast: nil
+        season: 2024
     )
 }
 
@@ -426,7 +439,7 @@ struct PlayerCardView: View {
         stats: .previewBatting,
         batterPlatoon: .preview,
         pitcherPlatoon: nil,
-        statcast: .preview
+        season: 2024
     )
     .preferredColorScheme(.dark)
 }

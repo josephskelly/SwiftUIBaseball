@@ -184,8 +184,7 @@ struct StatsCacheTests {
         players: [:],
         playerStats: [:],
         batterPlatoon: [:],
-        pitcherPlatoon: [:],
-        statcastBatting: [:]
+        pitcherPlatoon: [:]
     )
 
     @Test func returnsNilForUnknownKey() async {

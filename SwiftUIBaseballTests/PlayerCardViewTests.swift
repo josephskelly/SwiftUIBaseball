@@ -17,7 +17,7 @@ struct PlayerCardViewTests {
             stats: .previewBatting,
             batterPlatoon: .preview,
             pitcherPlatoon: nil,
-            statcast: .preview
+            season: 2024
         )
         _ = view
     }
@@ -30,7 +30,7 @@ struct PlayerCardViewTests {
             stats: .previewPitching,
             batterPlatoon: nil,
             pitcherPlatoon: .preview,
-            statcast: nil
+            season: 2023
         )
         _ = view
     }
@@ -43,7 +43,7 @@ struct PlayerCardViewTests {
             stats: nil,
             batterPlatoon: nil,
             pitcherPlatoon: nil,
-            statcast: nil
+            season: 2024
         )
         _ = view
     }
