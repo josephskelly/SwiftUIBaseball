@@ -273,10 +273,14 @@ struct GameDetailView: View {
     // MARK: - Formatting
 
     private func splitOPSLabel(_ ops: Double?, prefix: String) -> some View {
-        Text(ops.map { "\(prefix) \(formatOPS($0))" } ?? "\(prefix) —")
-            .font(.caption)
-            .monospacedDigit()
-            .foregroundStyle(ops == nil ? .tertiary : .secondary)
+        HStack {
+            Text(prefix)
+            Spacer()
+            Text(ops.map { formatOPS($0) } ?? "—")
+                .monospacedDigit()
+        }
+        .font(.caption)
+        .foregroundStyle(ops == nil ? .tertiary : .secondary)
     }
 
     /// Returns the last whitespace-delimited word of a player's full name.
