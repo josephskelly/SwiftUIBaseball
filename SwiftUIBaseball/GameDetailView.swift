@@ -10,7 +10,7 @@ import SwiftBaseball
 
 /// Column that the roster list can be sorted by.
 enum SortField: String, CaseIterable {
-    case number, name, ops, vsLeft, vsRight, hand
+    case number, name, ops, vsLeft, vsRight, gbPercent, fbPercent, hand
 }
 
 struct GameDetailView: View {
@@ -23,6 +23,9 @@ struct GameDetailView: View {
     @State private var players: [Int: Player] = [:]
     @State private var batterPlatoon: [Int: PlayerPlatoonStats] = [:]
     @State private var pitcherPlatoon: [Int: PitcherPlatoonStats] = [:]
+    @State private var statcastBatting: [Int: StatcastBatting] = [:]
+    @State private var statcastPitching: [Int: StatcastPitching] = [:]
+    @State private var statcastTask: Task<Void, Never>?
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var selectedRosterEntry: RosterEntry?
@@ -79,6 +82,13 @@ struct GameDetailView: View {
             sortField = .name
             sortAscending = true
         }
+        .onChange(of: selectedRosterEntry) { _, newEntry in
+            guard let entry = newEntry else { return }
+            startStatcastLoading(prioritizeId: entry.id)
+        }
+        .onDisappear {
+            statcastTask?.cancel()
+        }
     }
 
     private var navigationTitle: String {
@@ -117,7 +127,9 @@ struct GameDetailView: View {
                 stats: playerStats[entry.id],
                 batterPlatoon: batterPlatoon[entry.id],
                 pitcherPlatoon: pitcherPlatoon[entry.id],
-                season: statsSeasonYear
+                season: statsSeasonYear,
+                preloadedStatcast: statcastBatting[entry.id],
+                preloadedStatcastPitching: statcastPitching[entry.id]
             )
         }
     }
@@ -138,6 +150,7 @@ struct GameDetailView: View {
                 .gridColumnAlignment(.leading)
 
             sortButton("Name", field: .name)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .gridColumnAlignment(.leading)
 
             if isWide {
@@ -148,14 +161,17 @@ struct GameDetailView: View {
                     .gridColumnAlignment(.trailing)
                 sortButton("vR", field: .vsRight, alignment: .trailing)
                     .gridColumnAlignment(.trailing)
-            } else {
-                Color.clear
-                    .gridCellUnsizedAxes([.horizontal, .vertical])
-                    .gridCellColumns(3)
             }
 
             sortButton("OPS", field: .ops, alignment: .trailing)
                 .gridColumnAlignment(.trailing)
+
+            if isWide {
+                sortButton("GB%", field: .gbPercent, alignment: .trailing)
+                    .gridColumnAlignment(.trailing)
+                sortButton("FB%", field: .fbPercent, alignment: .trailing)
+                    .gridColumnAlignment(.trailing)
+            }
 
             sortButton("H", field: .hand, alignment: .trailing)
                 .gridColumnAlignment(.trailing)
@@ -173,6 +189,7 @@ struct GameDetailView: View {
                     .foregroundStyle(.secondary)
 
                 Text(abbreviatedName(entry.person.fullName))
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
                 if isWide {
                     Color.clear
@@ -190,13 +207,22 @@ struct GameDetailView: View {
                             : batterPlatoon[entry.id]?.vsRight?.ops,
                         prefix: "vR"
                     )
-                } else {
-                    Color.clear
-                        .gridCellUnsizedAxes([.horizontal, .vertical])
-                        .gridCellColumns(3)
                 }
 
                 opsCell(entry: entry, isPitcher: isPitcher)
+
+                if isWide {
+                    statcastPercentCell(
+                        isPitcher
+                            ? statcastPitching[entry.id]?.gbPercent
+                            : statcastBatting[entry.id]?.gbPercent
+                    )
+                    statcastPercentCell(
+                        isPitcher
+                            ? statcastPitching[entry.id]?.fbPercent
+                            : statcastBatting[entry.id]?.fbPercent
+                    )
+                }
 
                 Text(handednessLabel(entry: entry, isPitcher: isPitcher))
                     .font(.caption)
@@ -226,6 +252,14 @@ struct GameDetailView: View {
         } else {
             Text("")
         }
+    }
+
+    /// Formatted percentage cell for Statcast batted-ball data (GB%, FB%).
+    private func statcastPercentCell(_ value: Double?) -> some View {
+        Text(formatPercent(value))
+            .font(.caption)
+            .monospacedDigit()
+            .foregroundStyle(value == nil ? .tertiary : .secondary)
     }
 
     /// A tappable label that toggles sort direction for the given field.
@@ -276,7 +310,9 @@ struct GameDetailView: View {
             playerStats: playerStats,
             players: players,
             batterPlatoon: batterPlatoon,
-            pitcherPlatoon: pitcherPlatoon
+            pitcherPlatoon: pitcherPlatoon,
+            statcastBatting: statcastBatting,
+            statcastPitching: statcastPitching
         )
     }
 
@@ -359,6 +395,9 @@ struct GameDetailView: View {
             ),
             for: game.id
         )
+
+        // Begin background Statcast loading after season stats are ready.
+        startStatcastLoading()
     }
 
     private func loadPlayerStats(for entries: [RosterEntry]) async {
@@ -414,6 +453,72 @@ struct GameDetailView: View {
             }
         }
     }
+
+    // MARK: - Background Statcast Loading
+
+    /// Starts (or restarts) serial Statcast fetching for all roster entries.
+    ///
+    /// Savant's CSV endpoint is rate-limited, so requests run one at a time.
+    /// If `prioritizeId` is provided, that player is fetched first so a
+    /// freshly-opened player card gets data as quickly as possible.
+    private func startStatcastLoading(prioritizeId: Int? = nil) {
+        statcastTask?.cancel()
+        let season = statsSeasonYear
+        let allEntries = awayRoster + homeRoster
+
+        statcastTask = Task {
+            var ordered = allEntries
+            if let priorityId = prioritizeId,
+               let idx = ordered.firstIndex(where: { $0.id == priorityId }) {
+                let entry = ordered.remove(at: idx)
+                ordered.insert(entry, at: 0)
+            }
+
+            for entry in ordered {
+                guard !Task.isCancelled else { return }
+
+                let isPitcher = entry.position == .pitcher
+
+                if isPitcher {
+                    guard statcastPitching[entry.id] == nil else { continue }
+                    if let cached = await StatsCache.shared.statcastPitching(
+                        playerId: entry.id, season: season
+                    ) {
+                        statcastPitching[entry.id] = cached
+                        continue
+                    }
+                    if let result = try? await SwiftBaseball
+                        .statcastPitching(playerId: entry.id)
+                        .season(season)
+                        .fetch() {
+                        guard !Task.isCancelled else { return }
+                        statcastPitching[entry.id] = result
+                        await StatsCache.shared.setStatcastPitching(
+                            result, playerId: entry.id, season: season
+                        )
+                    }
+                } else {
+                    guard statcastBatting[entry.id] == nil else { continue }
+                    if let cached = await StatsCache.shared.statcast(
+                        playerId: entry.id, season: season
+                    ) {
+                        statcastBatting[entry.id] = cached
+                        continue
+                    }
+                    if let result = try? await SwiftBaseball
+                        .statcastBatting(playerId: entry.id)
+                        .season(season)
+                        .fetch() {
+                        guard !Task.isCancelled else { return }
+                        statcastBatting[entry.id] = result
+                        await StatsCache.shared.setStatcast(
+                            result, playerId: entry.id, season: season
+                        )
+                    }
+                }
+            }
+        }
+    }
 }
 
 // MARK: - Roster Sorting
@@ -430,7 +535,9 @@ func sortRoster(
     playerStats: [Int: PlayerSeasonStats],
     players: [Int: Player],
     batterPlatoon: [Int: PlayerPlatoonStats],
-    pitcherPlatoon: [Int: PitcherPlatoonStats]
+    pitcherPlatoon: [Int: PitcherPlatoonStats],
+    statcastBatting: [Int: StatcastBatting] = [:],
+    statcastPitching: [Int: StatcastPitching] = [:]
 ) -> [RosterEntry] {
     entries.sorted { a, b in
         /// Extracts the optional value used for sorting a given entry.
@@ -446,13 +553,22 @@ func sortRoster(
             case .vsRight:
                 return platoonOPS(entry, vsLeft: false, isPitcher: isPitcher,
                                   batter: batterPlatoon, pitcher: pitcherPlatoon)
+            case .gbPercent:
+                return isPitcher
+                    ? statcastPitching[entry.id]?.gbPercent
+                    : statcastBatting[entry.id]?.gbPercent
+            case .fbPercent:
+                return isPitcher
+                    ? statcastPitching[entry.id]?.fbPercent
+                    : statcastBatting[entry.id]?.fbPercent
             case .name, .hand:
                 return nil  // not used for string fields
             }
         }
 
         // For numeric fields, pin nil values to the bottom regardless of direction.
-        if field == .number || field == .ops || field == .vsLeft || field == .vsRight {
+        if field == .number || field == .ops || field == .vsLeft || field == .vsRight
+            || field == .gbPercent || field == .fbPercent {
             let valA = optionalValue(a)
             let valB = optionalValue(b)
             switch (valA, valB) {
