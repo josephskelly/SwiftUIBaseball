@@ -87,43 +87,28 @@ struct GameDetailView: View {
         return "\(away) @ \(home)"
     }
 
-    // MARK: - Roster List
+    // MARK: - Roster Grid
 
+    /// Scrollable roster grid for the selected team side.
+    ///
+    /// Uses a `Grid` layout so that column alignment is automatic across
+    /// section headers and data rows, eliminating manual frame-width matching.
     @ViewBuilder
     private func rosterList(for side: TeamSide) -> some View {
         let roster = side == .away ? awayRoster : homeRoster
         let pitchers = sorted(roster.filter { $0.position == .pitcher }, isPitcher: true)
         let positionPlayers = sorted(roster.filter { $0.position != .pitcher }, isPitcher: false)
 
-        List {
-            if !positionPlayers.isEmpty {
-                Section {
-                    ForEach(positionPlayers) { entry in
-                        Button { selectedRosterEntry = entry } label: {
-                            rosterRow(entry: entry, isPitcher: false)
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                    }
-                } header: {
-                    rosterHeader(title: "Position Players", isPitcher: false)
-                        .padding(.trailing, 20)
+        ScrollView {
+            Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 0) {
+                if !positionPlayers.isEmpty {
+                    rosterSection(title: "Position Players", entries: positionPlayers, isPitcher: false)
+                }
+                if !pitchers.isEmpty {
+                    rosterSection(title: "Pitchers", entries: pitchers, isPitcher: true)
                 }
             }
-            if !pitchers.isEmpty {
-                Section {
-                    ForEach(pitchers) { entry in
-                        Button { selectedRosterEntry = entry } label: {
-                            rosterRow(entry: entry, isPitcher: true)
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                    }
-                } header: {
-                    rosterHeader(title: "Pitchers", isPitcher: true)
-                        .padding(.trailing, 20)
-                }
-            }
+            .padding(.horizontal)
         }
         .sheet(item: $selectedRosterEntry) { entry in
             PlayerCardView(
@@ -137,96 +122,108 @@ struct GameDetailView: View {
         }
     }
 
-    private func rosterRow(entry: RosterEntry, isPitcher: Bool) -> some View {
-        HStack {
-            Text("#\(entry.jerseyNumber ?? "-")")
-                .monospacedDigit()
-                .frame(width: 40, alignment: .leading)
-                .foregroundStyle(.secondary)
+    /// Produces grid rows for a roster section: title, column headers, and data rows.
+    @ViewBuilder
+    private func rosterSection(title: String, entries: [RosterEntry], isPitcher: Bool) -> some View {
+        // Section title — not inside a GridRow, so it spans all columns.
+        Text(title)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .padding(.top, 16)
+            .padding(.bottom, 4)
 
-            Text(abbreviatedName(entry.person.fullName))
+        // Column headers
+        GridRow {
+            sortButton("#", field: .number)
+                .gridColumnAlignment(.leading)
 
-            Spacer()
+            sortButton("Name", field: .name)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .gridCellColumns(isWide ? 1 : 3)
+                .gridColumnAlignment(.leading)
 
             if isWide {
-                HStack(spacing: 14) {
-                    if isPitcher {
-                        splitOPSLabel(pitcherPlatoon[entry.id]?.vsLeft?.ops, prefix: "vL")
-                        splitOPSLabel(pitcherPlatoon[entry.id]?.vsRight?.ops, prefix: "vR")
-                    } else {
-                        splitOPSLabel(batterPlatoon[entry.id]?.vsLeft?.ops, prefix: "vL")
-                        splitOPSLabel(batterPlatoon[entry.id]?.vsRight?.ops, prefix: "vR")
-                    }
-                }
+                sortButton("vL", field: .vsLeft, alignment: .trailing)
+                    .gridColumnAlignment(.trailing)
+                sortButton("vR", field: .vsRight, alignment: .trailing)
+                    .gridColumnAlignment(.trailing)
             }
 
-            Group {
-                if isPitcher {
-                    if let stats = playerStats[entry.id],
-                       let pitching = stats.pitching,
-                       let ops = pitching.ops {
-                        Text(formatOPS(ops))
-                            .font(.caption)
-                            .monospacedDigit()
-                            .foregroundStyle(.secondary)
-                    }
-                } else {
-                    if let stats = playerStats[entry.id],
-                       let batting = stats.batting,
-                       let ops = batting.ops {
-                        Text(formatOPS(ops))
-                            .font(.caption)
-                            .monospacedDigit()
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
-            .frame(width: 70, alignment: .trailing)
+            sortButton("OPS", field: .ops, alignment: .trailing)
+                .gridColumnAlignment(.trailing)
 
-            Text(handednessLabel(entry: entry, isPitcher: isPitcher))
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .frame(width: 30, alignment: .trailing)
-        }
-        .accessibilityElement(children: .combine)
-    }
-
-    // MARK: - Column Header
-
-    /// Tappable column header row that mirrors the layout of ``rosterRow(entry:isPitcher:)``.
-    private func rosterHeader(title: String, isPitcher: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title)
-            HStack {
-                sortButton("#", field: .number)
-                    .frame(width: 40, alignment: .leading)
-
-                sortButton("Name", field: .name)
-
-                Spacer()
-
-                if isWide {
-                    HStack(spacing: 14) {
-                        sortButton("vL", field: .vsLeft)
-                            .frame(width: 80, alignment: .trailing)
-                        sortButton("vR", field: .vsRight)
-                            .frame(width: 80, alignment: .trailing)
-                    }
-                }
-
-                sortButton("OPS", field: .ops)
-                    .frame(width: 70, alignment: .trailing)
-
-                sortButton("H", field: .hand)
-                    .frame(width: 30, alignment: .trailing)
-            }
+            sortButton("H", field: .hand, alignment: .trailing)
+                .gridColumnAlignment(.trailing)
         }
         .font(.caption.weight(.semibold))
         .foregroundStyle(.secondary)
+
+        // Data rows
+        ForEach(entries) { entry in
+            Divider()
+
+            GridRow {
+                Text("#\(entry.jerseyNumber ?? "-")")
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+
+                Text(abbreviatedName(entry.person.fullName))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .gridCellColumns(isWide ? 1 : 3)
+
+                if isWide {
+                    splitOPSLabel(
+                        isPitcher
+                            ? pitcherPlatoon[entry.id]?.vsLeft?.ops
+                            : batterPlatoon[entry.id]?.vsLeft?.ops,
+                        prefix: "vL"
+                    )
+                    splitOPSLabel(
+                        isPitcher
+                            ? pitcherPlatoon[entry.id]?.vsRight?.ops
+                            : batterPlatoon[entry.id]?.vsRight?.ops,
+                        prefix: "vR"
+                    )
+                }
+
+                opsCell(entry: entry, isPitcher: isPitcher)
+
+                Text(handednessLabel(entry: entry, isPitcher: isPitcher))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.vertical, 12)
+            .contentShape(Rectangle())
+            .onTapGesture { selectedRosterEntry = entry }
+            .accessibilityAddTraits(.isButton)
+            .accessibilityElement(children: .combine)
+        }
+    }
+
+    /// OPS value cell for a roster grid row.
+    @ViewBuilder
+    private func opsCell(entry: RosterEntry, isPitcher: Bool) -> some View {
+        let ops: Double? = if isPitcher {
+            playerStats[entry.id]?.pitching?.ops
+        } else {
+            playerStats[entry.id]?.batting?.ops
+        }
+        if let ops {
+            Text(formatOPS(ops))
+                .font(.caption)
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+        } else {
+            Text("")
+        }
     }
 
     /// A tappable label that toggles sort direction for the given field.
-    private func sortButton(_ label: String, field: SortField) -> some View {
+    private func sortButton(
+        _ label: String,
+        field: SortField,
+        alignment: Alignment = .leading
+    ) -> some View {
         Button {
             if sortField == field {
                 sortAscending.toggle()
@@ -242,7 +239,7 @@ struct GameDetailView: View {
                         .imageScale(.small)
                 }
             }
-            .frame(minWidth: 44, minHeight: 44)
+            .frame(minWidth: 44, minHeight: 44, alignment: alignment)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -280,7 +277,6 @@ struct GameDetailView: View {
             .font(.caption)
             .monospacedDigit()
             .foregroundStyle(ops == nil ? .tertiary : .secondary)
-            .frame(width: 80, alignment: .trailing)
     }
 
     /// Returns the last whitespace-delimited word of a player's full name.
