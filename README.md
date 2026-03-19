@@ -8,6 +8,7 @@ A SwiftUI app that displays live MLB schedule data and roster information using 
 - Game detail view with away/home roster tabs
 - Per-player OPS stats (batting or pitching) for the current season, with prior-season fallback
 - Statcast batted-ball data on player cards: exit velocity, launch angle, barrel rate, hard-hit rate, batted-ball distribution, and expected stats (xBA, xSLG, xwOBA)
+- "No season stats available" fallback on player cards when the API returns no data (e.g. spring training pitchers)
 - Handedness indicator (L / R / S) for batters and pitchers
 - In-memory stats cache: re-visiting a game detail is instant (no network round-trips)
 

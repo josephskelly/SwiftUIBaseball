@@ -62,6 +62,14 @@ struct PlayerCardView: View {
                                 .frame(maxWidth: .infinity, alignment: .center)
                         }
                     }
+
+                    if stats == nil && batterPlatoon == nil && pitcherPlatoon == nil && statcast == nil && !isLoadingStatcast {
+                        cardSection(title: "Season Stats (\(season))") {
+                            Text("No \(season) season stats available.")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                 }
                 .padding()
             }
