@@ -9,13 +9,13 @@ import Foundation
 
 /// Format an OPS value for display.
 ///
-/// Values below 1.0 are shown as three-digit decimals (e.g. `.850 OPS`).
-/// Values at or above 1.0 include the leading digit (e.g. `1.036 OPS`).
+/// Values below 1.0 are shown as three-digit decimals (e.g. `.850`).
+/// Values at or above 1.0 include the leading digit (e.g. `1.036`).
 func formatOPS(_ ops: Double) -> String {
     if ops >= 1.0 {
-        return String(format: "%.3f OPS", ops)
+        return String(format: "%.3f", ops)
     } else {
-        return String(format: ".%03.0f OPS", ops * 1000)
+        return String(format: ".%03.0f", ops * 1000)
     }
 }
 
