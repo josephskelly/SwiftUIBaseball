@@ -10,7 +10,7 @@ import SwiftBaseball
 
 /// Column that the roster list can be sorted by.
 enum SortField: String, CaseIterable {
-    case number, name, ops, vsLeft, vsRight, hand
+    case number, name, ops, vsLeft, vsRight, gbPercent, fbPercent, hand
 }
 
 struct GameDetailView: View {
@@ -170,9 +170,9 @@ struct GameDetailView: View {
                 .gridColumnAlignment(.trailing)
 
             if isWide {
-                Text("GB%")
+                sortButton("GB%", field: .gbPercent, alignment: .trailing)
                     .gridColumnAlignment(.trailing)
-                Text("FB%")
+                sortButton("FB%", field: .fbPercent, alignment: .trailing)
                     .gridColumnAlignment(.trailing)
             }
 
@@ -316,7 +316,9 @@ struct GameDetailView: View {
             playerStats: playerStats,
             players: players,
             batterPlatoon: batterPlatoon,
-            pitcherPlatoon: pitcherPlatoon
+            pitcherPlatoon: pitcherPlatoon,
+            statcastBatting: statcastBatting,
+            statcastPitching: statcastPitching
         )
     }
 
@@ -539,7 +541,9 @@ func sortRoster(
     playerStats: [Int: PlayerSeasonStats],
     players: [Int: Player],
     batterPlatoon: [Int: PlayerPlatoonStats],
-    pitcherPlatoon: [Int: PitcherPlatoonStats]
+    pitcherPlatoon: [Int: PitcherPlatoonStats],
+    statcastBatting: [Int: StatcastBatting] = [:],
+    statcastPitching: [Int: StatcastPitching] = [:]
 ) -> [RosterEntry] {
     entries.sorted { a, b in
         /// Extracts the optional value used for sorting a given entry.
@@ -555,13 +559,22 @@ func sortRoster(
             case .vsRight:
                 return platoonOPS(entry, vsLeft: false, isPitcher: isPitcher,
                                   batter: batterPlatoon, pitcher: pitcherPlatoon)
+            case .gbPercent:
+                return isPitcher
+                    ? statcastPitching[entry.id]?.gbPercent
+                    : statcastBatting[entry.id]?.gbPercent
+            case .fbPercent:
+                return isPitcher
+                    ? statcastPitching[entry.id]?.fbPercent
+                    : statcastBatting[entry.id]?.fbPercent
             case .name, .hand:
                 return nil  // not used for string fields
             }
         }
 
         // For numeric fields, pin nil values to the bottom regardless of direction.
-        if field == .number || field == .ops || field == .vsLeft || field == .vsRight {
+        if field == .number || field == .ops || field == .vsLeft || field == .vsRight
+            || field == .gbPercent || field == .fbPercent {
             let valA = optionalValue(a)
             let valB = optionalValue(b)
             switch (valA, valB) {
