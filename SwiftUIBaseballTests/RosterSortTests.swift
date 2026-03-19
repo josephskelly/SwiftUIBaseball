@@ -17,11 +17,12 @@ private let testDecoder: JSONDecoder = {
     return d
 }()
 
-/// Creates a roster entry with the given id, name, and position code.
-private func makeEntry(id: Int, name: String, position: String = "9") -> RosterEntry {
+/// Creates a roster entry with the given id, name, jersey number, and position code.
+private func makeEntry(id: Int, name: String, number: String? = nil, position: String = "9") -> RosterEntry {
+    let numberJSON = number.map { "\"\($0)\"" } ?? "null"
     // swiftlint:disable:next force_try
-    try! testDecoder.decode(RosterEntry.self, from: Data("""
-    {"person": {"id": \(id), "fullName": "\(name)"}, "position": "\(position)", "status": "Active"}
+    return try! testDecoder.decode(RosterEntry.self, from: Data("""
+    {"person": {"id": \(id), "fullName": "\(name)"}, "jerseyNumber": \(numberJSON), "position": "\(position)", "status": "Active"}
     """.utf8))
 }
 
@@ -65,6 +66,41 @@ struct RosterSortTests {
             playerStats: [:], players: [:], batterPlatoon: [:], pitcherPlatoon: [:]
         )
         #expect(sorted.map(\.id) == [soto.id, ohtani.id, judge.id])
+    }
+
+    // MARK: Number sorting
+
+    @Test func sortByNumberAscending() {
+        let a = makeEntry(id: 1, name: "Aaron Judge", number: "99")
+        let b = makeEntry(id: 2, name: "Shohei Ohtani", number: "17")
+        let c = makeEntry(id: 3, name: "Juan Soto", number: "22")
+        let sorted = sortRoster(
+            [a, b, c], by: .number, ascending: true, isPitcher: false,
+            playerStats: [:], players: [:], batterPlatoon: [:], pitcherPlatoon: [:]
+        )
+        #expect(sorted.map(\.id) == [b.id, c.id, a.id])
+    }
+
+    @Test func sortByNumberDescending() {
+        let a = makeEntry(id: 1, name: "Aaron Judge", number: "99")
+        let b = makeEntry(id: 2, name: "Shohei Ohtani", number: "17")
+        let c = makeEntry(id: 3, name: "Juan Soto", number: "22")
+        let sorted = sortRoster(
+            [a, b, c], by: .number, ascending: false, isPitcher: false,
+            playerStats: [:], players: [:], batterPlatoon: [:], pitcherPlatoon: [:]
+        )
+        #expect(sorted.map(\.id) == [a.id, c.id, b.id])
+    }
+
+    @Test func nilNumberSortsLast() {
+        let a = makeEntry(id: 1, name: "Aaron Judge", number: "99")
+        let b = makeEntry(id: 2, name: "Shohei Ohtani")  // no number
+        let c = makeEntry(id: 3, name: "Juan Soto", number: "22")
+        let sorted = sortRoster(
+            [a, b, c], by: .number, ascending: true, isPitcher: false,
+            playerStats: [:], players: [:], batterPlatoon: [:], pitcherPlatoon: [:]
+        )
+        #expect(sorted.last?.id == b.id)
     }
 
     // MARK: OPS sorting

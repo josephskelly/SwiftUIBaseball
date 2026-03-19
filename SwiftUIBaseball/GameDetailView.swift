@@ -10,7 +10,7 @@ import SwiftBaseball
 
 /// Column that the roster list can be sorted by.
 enum SortField: String, CaseIterable {
-    case name, ops, vsLeft, vsRight, hand
+    case number, name, ops, vsLeft, vsRight, hand
 }
 
 struct GameDetailView: View {
@@ -193,7 +193,7 @@ struct GameDetailView: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
             HStack {
-                Text("#")
+                sortButton("#", field: .number)
                     .frame(width: 40, alignment: .leading)
 
                 sortButton("Name", field: .name)
@@ -417,6 +417,8 @@ func sortRoster(
         /// Extracts the optional value used for sorting a given entry.
         func optionalValue(_ entry: RosterEntry) -> Double? {
             switch field {
+            case .number:
+                return entry.jerseyNumber.flatMap(Double.init)
             case .ops:
                 return opsValue(entry, isPitcher: isPitcher, stats: playerStats)
             case .vsLeft:
@@ -431,7 +433,7 @@ func sortRoster(
         }
 
         // For numeric fields, pin nil values to the bottom regardless of direction.
-        if field == .ops || field == .vsLeft || field == .vsRight {
+        if field == .number || field == .ops || field == .vsLeft || field == .vsRight {
             let valA = optionalValue(a)
             let valB = optionalValue(b)
             switch (valA, valB) {
