@@ -81,11 +81,18 @@ struct PlayerCardView: View {
     /// Fetches Statcast batted-ball data for position players on card appear.
     private func loadStatcast() async {
         guard !isPitcher else { return }
+        if let cached = await StatsCache.shared.statcast(playerId: entry.id, season: season) {
+            statcast = cached
+            return
+        }
         isLoadingStatcast = true
-        statcast = try? await SwiftBaseball
+        if let result = try? await SwiftBaseball
             .statcastBatting(playerId: entry.id)
             .season(season)
-            .fetch()
+            .fetch() {
+            statcast = result
+            await StatsCache.shared.setStatcast(result, playerId: entry.id, season: season)
+        }
         isLoadingStatcast = false
     }
 

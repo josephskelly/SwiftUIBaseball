@@ -42,4 +42,23 @@ actor StatsCache {
     func set(_ entry: Entry, for gamePk: Int) {
         cache[gamePk] = entry
     }
+
+    // MARK: - Statcast Cache
+
+    /// Statcast data keyed by `"playerId-season"`.
+    private var statcastCache: [String: StatcastBatting] = [:]
+
+    private static func statcastKey(playerId: Int, season: Int) -> String {
+        "\(playerId)-\(season)"
+    }
+
+    /// Returns cached Statcast data for a player/season pair, or `nil` if not cached.
+    func statcast(playerId: Int, season: Int) -> StatcastBatting? {
+        statcastCache[Self.statcastKey(playerId: playerId, season: season)]
+    }
+
+    /// Stores Statcast data for a player/season pair.
+    func setStatcast(_ data: StatcastBatting, playerId: Int, season: Int) {
+        statcastCache[Self.statcastKey(playerId: playerId, season: season)] = data
+    }
 }
