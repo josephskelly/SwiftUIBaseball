@@ -34,9 +34,7 @@ struct GameDetailView: View {
 
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.verticalSizeClass)   private var verticalSizeClass
-    @Environment(\.dismiss) private var dismiss
     private var isWide: Bool { horizontalSizeClass == .regular || verticalSizeClass == .compact }
-    private var isCompactHeight: Bool { verticalSizeClass == .compact }
 
     /// Use the game's own season, falling back to current calendar year.
     private var gameSeason: Int {
@@ -53,17 +51,12 @@ struct GameDetailView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            if isCompactHeight {
-                compactHeader
-            }
-
             Picker("Team", selection: $selectedTeam) {
                 Text(game.teams.away.team.name).tag(TeamSide.away)
                 Text(game.teams.home.team.name).tag(TeamSide.home)
             }
             .pickerStyle(.segmented)
-            .padding(.horizontal)
-            .padding(.vertical, isCompactHeight ? 4 : 16)
+            .padding()
 
             Group {
                 if isLoading {
@@ -82,7 +75,6 @@ struct GameDetailView: View {
         }
         .navigationTitle(navigationTitle)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar(isCompactHeight ? .hidden : .visible, for: .navigationBar)
         .task {
             await loadRosters()
         }
@@ -97,28 +89,6 @@ struct GameDetailView: View {
         .onDisappear {
             statcastTask?.cancel()
         }
-    }
-
-    /// Compact header shown in landscape in place of the navigation bar.
-    private var compactHeader: some View {
-        HStack {
-            Button { dismiss() } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "chevron.left")
-                    Text("Back")
-                }
-                .font(.subheadline)
-            }
-            Spacer()
-            Text(navigationTitle)
-                .font(.subheadline.weight(.semibold))
-                .lineLimit(1)
-            Spacer()
-            // Balance the back button width
-            Color.clear.frame(width: 60)
-        }
-        .padding(.horizontal)
-        .padding(.vertical, 4)
     }
 
     private var navigationTitle: String {
