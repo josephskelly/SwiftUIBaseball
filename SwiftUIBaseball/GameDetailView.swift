@@ -31,14 +31,8 @@ struct GameDetailView: View {
         Int(game.season) ?? Calendar.current.component(.year, from: Date())
     }
 
-    /// The season year to use as the primary stats source.
-    ///
-    /// Spring training rosters pre-date any regular-season stats, so fetching
-    /// `gameSeason - 1` directly avoids a guaranteed wasted network request.
-    /// All other game types (regular season, postseason, all-star) use `gameSeason`.
-    private var statsSeasonYear: Int {
-        game.gameType == .springTraining ? gameSeason - 1 : gameSeason
-    }
+    /// The season year used for stats fetches — always matches the game's own season.
+    private var statsSeasonYear: Int { gameSeason }
 
     enum TeamSide: String, CaseIterable, Identifiable {
         case away, home
@@ -260,6 +254,7 @@ struct GameDetailView: View {
 
     private func loadPlayerStats(for entries: [RosterEntry]) async {
         let season = statsSeasonYear
+        let gameType = game.gameType
         await withTaskGroup(of: (Int, Player?, PlayerSeasonStats?, PlayerPlatoonStats?, PitcherPlatoonStats?).self) { group in
             for entry in entries {
                 let isPitcher = entry.position == .pitcher
@@ -267,20 +262,22 @@ struct GameDetailView: View {
                     let statGroup: StatGroup = isPitcher ? .pitching : .batting
                     async let playerResult = SwiftBaseball.player(id: entry.id).fetch()
 
-                    // Season stats — single fetch, no fallback
+                    // Season stats filtered by game type
                     let stats = try? await SwiftBaseball
                         .playerStats(id: entry.id)
                         .season(season)
                         .group(statGroup)
+                        .gameType(gameType)
                         .fetch().first
 
-                    // Platoon splits — single fetch, no fallback
+                    // Platoon splits filtered by game type
                     var bPlatoon: PlayerPlatoonStats?
                     var pPlatoon: PitcherPlatoonStats?
                     if isPitcher {
                         if let result = try? await SwiftBaseball
                             .pitcherPlatoonStats(id: entry.id)
                             .season(season)
+                            .gameType(gameType)
                             .fetch(),
                            result.vsLeft?.ops != nil || result.vsRight?.ops != nil {
                             pPlatoon = result
@@ -289,6 +286,7 @@ struct GameDetailView: View {
                         if let result = try? await SwiftBaseball
                             .playerPlatoonStats(id: entry.id)
                             .season(season)
+                            .gameType(gameType)
                             .fetch(),
                            result.vsLeft?.ops != nil || result.vsRight?.ops != nil {
                             bPlatoon = result
