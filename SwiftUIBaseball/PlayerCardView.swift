@@ -49,12 +49,12 @@ struct PlayerCardView: View {
                         seasonStatsSection(stats)
                     }
 
-                    if let statcast {
-                        statcastSection(statcast)
-                    }
-
                     if batterPlatoon != nil || pitcherPlatoon != nil {
                         platoonSection
+                    }
+
+                    if let statcast {
+                        statcastSection(statcast)
                     }
                 }
                 .padding()
