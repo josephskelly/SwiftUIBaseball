@@ -29,6 +29,7 @@ struct PlayerCardView: View {
     let season: Int
 
     @State private var statcast: StatcastBatting?
+    @State private var statcastPitching: StatcastPitching?
     @State private var isLoadingStatcast = false
     @Environment(\.dismiss) private var dismiss
 
@@ -54,12 +55,24 @@ struct PlayerCardView: View {
                         platoonSection
                     }
 
-                    if let statcast {
-                        statcastSection(statcast)
-                    } else if isLoadingStatcast {
-                        cardSection(title: "Statcast") {
-                            ProgressView()
-                                .frame(maxWidth: .infinity, alignment: .center)
+                    if isPitcher {
+                        if let sp = statcastPitching {
+                            pitcherBattedBallSection(sp)
+                            pitchArsenalSection(sp)
+                        } else if isLoadingStatcast {
+                            cardSection(title: "Statcast") {
+                                ProgressView()
+                                    .frame(maxWidth: .infinity, alignment: .center)
+                            }
+                        }
+                    } else {
+                        if let statcast {
+                            statcastSection(statcast)
+                        } else if isLoadingStatcast {
+                            cardSection(title: "Statcast") {
+                                ProgressView()
+                                    .frame(maxWidth: .infinity, alignment: .center)
+                            }
                         }
                     }
 
@@ -87,9 +100,17 @@ struct PlayerCardView: View {
 
     // MARK: - Data Loading
 
-    /// Fetches Statcast batted-ball data for position players on card appear.
+    /// Fetches Statcast data on card appear — batting for position players, pitching for pitchers.
     private func loadStatcast() async {
-        guard !isPitcher else { return }
+        if isPitcher {
+            await loadStatcastPitching()
+        } else {
+            await loadStatcastBatting()
+        }
+    }
+
+    /// Fetches Statcast batted-ball data for position players.
+    private func loadStatcastBatting() async {
         if let cached = await StatsCache.shared.statcast(playerId: entry.id, season: season) {
             statcast = cached
             return
@@ -101,6 +122,23 @@ struct PlayerCardView: View {
             .fetch() {
             statcast = result
             await StatsCache.shared.setStatcast(result, playerId: entry.id, season: season)
+        }
+        isLoadingStatcast = false
+    }
+
+    /// Fetches Statcast pitching data (batted ball against + pitch arsenal).
+    private func loadStatcastPitching() async {
+        if let cached = await StatsCache.shared.statcastPitching(playerId: entry.id, season: season) {
+            statcastPitching = cached
+            return
+        }
+        isLoadingStatcast = true
+        if let result = try? await SwiftBaseball
+            .statcastPitching(playerId: entry.id)
+            .season(season)
+            .fetch() {
+            statcastPitching = result
+            await StatsCache.shared.setStatcastPitching(result, playerId: entry.id, season: season)
         }
         isLoadingStatcast = false
     }
@@ -233,6 +271,91 @@ struct PlayerCardView: View {
             StatCell("xSLG",        sc.xSLG.map { formatRate($0) } ?? "—"),
             StatCell("xwOBA",       sc.xwOBA.map { formatRate($0) } ?? "—"),
         ]
+    }
+
+    // MARK: - Pitcher Statcast Sections
+
+    /// Batted-ball-against metrics for pitchers in a three-column grid.
+    private func pitcherBattedBallSection(_ sp: StatcastPitching) -> some View {
+        cardSection(title: "Batted Ball Against") {
+            statsGrid([
+                StatCell("Avg EV",   formatVelocity(sp.avgExitVelocity)),
+                StatCell("Max EV",   formatVelocity(sp.maxExitVelocity)),
+                StatCell("Avg LA",   formatAngle(sp.avgLaunchAngle)),
+                StatCell("Barrel%",  formatPercent(sp.barrelRate)),
+                StatCell("HardHit%", formatPercent(sp.hardHitRate)),
+                StatCell("BBE",      "\(sp.battedBallEvents)"),
+                StatCell("GB%",      formatPercent(sp.gbPercent)),
+                StatCell("FB%",      formatPercent(sp.fbPercent)),
+                StatCell("LD%",      formatPercent(sp.ldPercent)),
+                StatCell("xBA",      sp.xBA.map { formatRate($0) } ?? "—"),
+                StatCell("xSLG",     sp.xSLG.map { formatRate($0) } ?? "—"),
+                StatCell("xwOBA",    sp.xwOBA.map { formatRate($0) } ?? "—"),
+            ])
+        }
+    }
+
+    /// Pitch arsenal summary and pitch-mix table for pitchers.
+    private func pitchArsenalSection(_ sp: StatcastPitching) -> some View {
+        cardSection(title: "Pitch Arsenal") {
+            statsGrid([
+                StatCell("Avg FB",  formatVelocity(sp.avgFastballVelo)),
+                StatCell("Max FB",  formatVelocity(sp.maxFastballVelo)),
+                StatCell("Spin",    formatSpinRate(sp.avgSpinRate)),
+                StatCell("Whiff%",  formatPercent(sp.whiffRate)),
+                StatCell("CSW%",    formatPercent(sp.csw)),
+                StatCell("Pitches", "\(sp.totalPitches)"),
+            ])
+
+            if !sp.pitchMix.isEmpty {
+                Divider()
+                pitchMixTable(sp.pitchMix)
+            }
+        }
+    }
+
+    /// Pitch-mix breakdown table with usage%, velocity, and spin per pitch type.
+    private func pitchMixTable(_ mix: [PitchMixEntry]) -> some View {
+        VStack(spacing: 0) {
+            pitchMixHeaderRow()
+            ForEach(mix) { entry in
+                Divider()
+                pitchMixRow(entry)
+            }
+        }
+    }
+
+    private func pitchMixHeaderRow() -> some View {
+        HStack {
+            Text("Pitch")
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Text("Usage")
+                .frame(width: 50, alignment: .trailing)
+            Text("Velo")
+                .frame(width: 50, alignment: .trailing)
+            Text("Spin")
+                .frame(width: 50, alignment: .trailing)
+        }
+        .font(.caption)
+        .bold()
+        .foregroundStyle(.secondary)
+        .padding(.vertical, 4)
+    }
+
+    private func pitchMixRow(_ entry: PitchMixEntry) -> some View {
+        HStack {
+            Text(entry.name)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Text(formatPercent(entry.percentage))
+                .frame(width: 50, alignment: .trailing)
+            Text(formatVelocity(entry.avgVelocity))
+                .frame(width: 50, alignment: .trailing)
+            Text(formatSpinRate(entry.avgSpinRate))
+                .frame(width: 50, alignment: .trailing)
+        }
+        .font(.subheadline)
+        .monospacedDigit()
+        .padding(.vertical, 4)
     }
 
     // MARK: - Platoon Splits Section

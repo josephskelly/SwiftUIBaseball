@@ -60,6 +60,14 @@ func formatAngle(_ value: Double?) -> String {
     return String(format: "%.1f°", value)
 }
 
+/// Format a spin rate (RPM) as a whole number, e.g. `2431.0` → `"2431"`.
+///
+/// Returns `"—"` when the input is `nil`.
+func formatSpinRate(_ value: Double?) -> String {
+    guard let value else { return "—" }
+    return String(format: "%.0f", value)
+}
+
 /// Abbreviate a player's full name to "F. Last".
 ///
 /// Single-word names are returned unchanged.

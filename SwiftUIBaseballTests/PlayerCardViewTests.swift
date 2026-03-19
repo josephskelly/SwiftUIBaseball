@@ -98,4 +98,39 @@ struct PlayerCardViewTests {
         #expect(sc.xSLG != nil)
         #expect(sc.xwOBA != nil)
     }
+
+    /// Verify the pitcher statcast preview fixture has expected total pitches.
+    @Test func previewStatcastPitchingHasExpectedPitches() {
+        #expect(StatcastPitching.preview.totalPitches == 3245)
+    }
+
+    /// Verify pitcher statcast preview has non-nil arsenal metrics.
+    @Test func previewStatcastPitchingHasArsenalMetrics() {
+        let sp = StatcastPitching.preview
+        #expect(sp.avgFastballVelo != nil)
+        #expect(sp.maxFastballVelo != nil)
+        #expect(sp.avgSpinRate != nil)
+        #expect(sp.whiffRate != nil)
+        #expect(sp.csw != nil)
+        #expect(!sp.pitchMix.isEmpty)
+    }
+
+    /// Verify pitcher statcast preview has batted-ball-against data.
+    @Test func previewStatcastPitchingHasBattedBallData() {
+        let sp = StatcastPitching.preview
+        #expect(sp.battedBallEvents == 480)
+        #expect(sp.avgExitVelocity != nil)
+        #expect(sp.barrelRate != nil)
+        #expect(sp.gbPercent != nil)
+    }
+
+    /// Verify pitcher statcast preview pitch mix is sorted by usage.
+    @Test func previewStatcastPitchingMixIsSorted() {
+        let mix = StatcastPitching.preview.pitchMix
+        #expect(mix.count == 5)
+        #expect(mix[0].name == "4-Seam Fastball")
+        for i in 0..<mix.count - 1 {
+            #expect(mix[i].count >= mix[i + 1].count)
+        }
+    }
 }

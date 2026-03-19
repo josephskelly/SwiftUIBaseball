@@ -243,4 +243,47 @@ extension StatcastBatting {
         xwOBA: 0.448
     )
 }
+
+// MARK: - StatcastPitching mock
+
+extension StatcastPitching {
+    /// Mock Statcast pitching data modeled on a frontline starter's profile.
+    static let preview = StatcastPitching(
+        battedBallEvents: 480,
+        groundBalls: 192,
+        flyBalls: 144,
+        lineDrives: 110,
+        popups: 34,
+        gbPercent: 0.400,
+        fbPercent: 0.300,
+        ldPercent: 0.229,
+        popupPercent: 0.071,
+        avgExitVelocity: 87.2,
+        maxExitVelocity: 112.4,
+        avgLaunchAngle: 11.8,
+        barrelRate: 0.058,
+        hardHitRate: 0.312,
+        xBA: 0.238,
+        xSLG: 0.378,
+        xwOBA: 0.298,
+        totalPitches: 3245,
+        avgFastballVelo: 95.2,
+        maxFastballVelo: 98.7,
+        avgSpinRate: 2320,
+        whiffRate: 0.282,
+        csw: 0.310,
+        pitchMix: [
+            PitchMixEntry(name: "4-Seam Fastball", count: 1102, percentage: 0.340,
+                          avgVelocity: 95.2, avgSpinRate: 2380),
+            PitchMixEntry(name: "Slider", count: 812, percentage: 0.250,
+                          avgVelocity: 87.4, avgSpinRate: 2540),
+            PitchMixEntry(name: "Changeup", count: 650, percentage: 0.200,
+                          avgVelocity: 86.8, avgSpinRate: 1720),
+            PitchMixEntry(name: "Sinker", count: 487, percentage: 0.150,
+                          avgVelocity: 93.8, avgSpinRate: 2180),
+            PitchMixEntry(name: "Curveball", count: 194, percentage: 0.060,
+                          avgVelocity: 79.5, avgSpinRate: 2850),
+        ]
+    )
+}
 #endif
