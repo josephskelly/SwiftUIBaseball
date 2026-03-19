@@ -36,6 +36,30 @@ func formatIP(_ ip: Double) -> String {
     String(format: "%.1f", ip)
 }
 
+/// Format a percentage value (0–1 scale) as a whole-number percent, e.g. `0.45` → `"45%"`.
+///
+/// Returns `"—"` when the input is `nil`.
+func formatPercent(_ value: Double?) -> String {
+    guard let value else { return "—" }
+    return String(format: "%.0f%%", value * 100)
+}
+
+/// Format a velocity value (mph) with one decimal, e.g. `92.3` → `"92.3"`.
+///
+/// Returns `"—"` when the input is `nil`.
+func formatVelocity(_ value: Double?) -> String {
+    guard let value else { return "—" }
+    return String(format: "%.1f", value)
+}
+
+/// Format a launch angle (degrees) with one decimal and a degree sign, e.g. `12.4` → `"12.4°"`.
+///
+/// Returns `"—"` when the input is `nil`.
+func formatAngle(_ value: Double?) -> String {
+    guard let value else { return "—" }
+    return String(format: "%.1f°", value)
+}
+
 /// Abbreviate a player's full name to "F. Last".
 ///
 /// Single-word names are returned unchanged.

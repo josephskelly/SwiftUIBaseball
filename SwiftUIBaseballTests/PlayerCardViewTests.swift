@@ -16,7 +16,8 @@ struct PlayerCardViewTests {
             player: .previewBatter,
             stats: .previewBatting,
             batterPlatoon: .preview,
-            pitcherPlatoon: nil
+            pitcherPlatoon: nil,
+            statcast: .preview
         )
         _ = view
     }
@@ -28,7 +29,8 @@ struct PlayerCardViewTests {
             player: .previewPitcher,
             stats: .previewPitching,
             batterPlatoon: nil,
-            pitcherPlatoon: .preview
+            pitcherPlatoon: .preview,
+            statcast: nil
         )
         _ = view
     }
@@ -40,7 +42,8 @@ struct PlayerCardViewTests {
             player: nil,
             stats: nil,
             batterPlatoon: nil,
-            pitcherPlatoon: nil
+            pitcherPlatoon: nil,
+            statcast: nil
         )
         _ = view
     }
@@ -77,5 +80,22 @@ struct PlayerCardViewTests {
         let splits = PitcherPlatoonStats.preview
         #expect(splits.vsLeft != nil)
         #expect(splits.vsRight != nil)
+    }
+
+    /// Verify the statcast preview fixture has expected batted ball events.
+    @Test func previewStatcastHasExpectedBBE() {
+        #expect(StatcastBatting.preview.battedBallEvents == 392)
+    }
+
+    /// Verify statcast preview has non-nil quality-of-contact metrics.
+    @Test func previewStatcastHasQualityMetrics() {
+        let sc = StatcastBatting.preview
+        #expect(sc.avgExitVelocity != nil)
+        #expect(sc.maxExitVelocity != nil)
+        #expect(sc.barrelRate != nil)
+        #expect(sc.hardHitRate != nil)
+        #expect(sc.xBA != nil)
+        #expect(sc.xSLG != nil)
+        #expect(sc.xwOBA != nil)
     }
 }

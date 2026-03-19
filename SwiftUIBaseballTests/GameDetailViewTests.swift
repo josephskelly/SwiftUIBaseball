@@ -97,6 +97,65 @@ struct FormatRateTests {
     }
 }
 
+// MARK: - formatPercent
+
+struct FormatPercentTests {
+
+    @Test func typical() {
+        #expect(formatPercent(0.45) == "45%")
+    }
+
+    @Test func zero() {
+        #expect(formatPercent(0.0) == "0%")
+    }
+
+    @Test func one() {
+        #expect(formatPercent(1.0) == "100%")
+    }
+
+    @Test func nilValue() {
+        #expect(formatPercent(nil) == "—")
+    }
+
+    @Test func smallValue() {
+        #expect(formatPercent(0.074) == "7%")
+    }
+}
+
+// MARK: - formatVelocity
+
+struct FormatVelocityTests {
+
+    @Test func typical() {
+        #expect(formatVelocity(95.9) == "95.9")
+    }
+
+    @Test func nilValue() {
+        #expect(formatVelocity(nil) == "—")
+    }
+
+    @Test func wholeNumber() {
+        #expect(formatVelocity(100.0) == "100.0")
+    }
+}
+
+// MARK: - formatAngle
+
+struct FormatAngleTests {
+
+    @Test func typical() {
+        #expect(formatAngle(17.2) == "17.2°")
+    }
+
+    @Test func nilValue() {
+        #expect(formatAngle(nil) == "—")
+    }
+
+    @Test func negative() {
+        #expect(formatAngle(-5.3) == "-5.3°")
+    }
+}
+
 // MARK: - formatIP
 
 struct FormatIPTests {
@@ -125,7 +184,8 @@ struct StatsCacheTests {
         players: [:],
         playerStats: [:],
         batterPlatoon: [:],
-        pitcherPlatoon: [:]
+        pitcherPlatoon: [:],
+        statcastBatting: [:]
     )
 
     @Test func returnsNilForUnknownKey() async {

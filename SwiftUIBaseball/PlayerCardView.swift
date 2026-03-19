@@ -25,6 +25,8 @@ struct PlayerCardView: View {
     let batterPlatoon: PlayerPlatoonStats?
     /// Pitcher platoon splits (pitchers only), if available.
     let pitcherPlatoon: PitcherPlatoonStats?
+    /// Statcast batted-ball data (batters only), if available.
+    let statcast: StatcastBatting?
 
     @Environment(\.dismiss) private var dismiss
 
@@ -44,6 +46,10 @@ struct PlayerCardView: View {
 
                     if let stats {
                         seasonStatsSection(stats)
+                    }
+
+                    if let statcast {
+                        statcastSection(statcast)
                     }
 
                     if batterPlatoon != nil || pitcherPlatoon != nil {
@@ -164,6 +170,32 @@ struct PlayerCardView: View {
                 }
             }
         }
+    }
+
+    // MARK: - Statcast Section
+
+    /// Statcast batted-ball quality metrics in a three-column grid.
+    private func statcastSection(_ sc: StatcastBatting) -> some View {
+        cardSection(title: "Statcast") {
+            statsGrid(statcastCells(sc))
+        }
+    }
+
+    private func statcastCells(_ sc: StatcastBatting) -> [StatCell] {
+        [
+            StatCell("Avg EV",      formatVelocity(sc.avgExitVelocity)),
+            StatCell("Max EV",      formatVelocity(sc.maxExitVelocity)),
+            StatCell("Avg LA",      formatAngle(sc.avgLaunchAngle)),
+            StatCell("Barrel%",     formatPercent(sc.barrelRate)),
+            StatCell("HardHit%",    formatPercent(sc.hardHitRate)),
+            StatCell("BBE",         "\(sc.battedBallEvents)"),
+            StatCell("GB%",         formatPercent(sc.gbPercent)),
+            StatCell("FB%",         formatPercent(sc.fbPercent)),
+            StatCell("LD%",         formatPercent(sc.ldPercent)),
+            StatCell("xBA",         sc.xBA.map { formatRate($0) } ?? "—"),
+            StatCell("xSLG",        sc.xSLG.map { formatRate($0) } ?? "—"),
+            StatCell("xwOBA",       sc.xwOBA.map { formatRate($0) } ?? "—"),
+        ]
     }
 
     // MARK: - Platoon Splits Section
@@ -360,7 +392,8 @@ struct PlayerCardView: View {
         player: .previewBatter,
         stats: .previewBatting,
         batterPlatoon: .preview,
-        pitcherPlatoon: nil
+        pitcherPlatoon: nil,
+        statcast: .preview
     )
 }
 
@@ -370,7 +403,8 @@ struct PlayerCardView: View {
         player: .previewPitcher,
         stats: .previewPitching,
         batterPlatoon: nil,
-        pitcherPlatoon: .preview
+        pitcherPlatoon: .preview,
+        statcast: nil
     )
 }
 
@@ -380,7 +414,8 @@ struct PlayerCardView: View {
         player: nil,
         stats: nil,
         batterPlatoon: nil,
-        pitcherPlatoon: nil
+        pitcherPlatoon: nil,
+        statcast: nil
     )
 }
 
@@ -390,7 +425,8 @@ struct PlayerCardView: View {
         player: .previewBatter,
         stats: .previewBatting,
         batterPlatoon: .preview,
-        pitcherPlatoon: nil
+        pitcherPlatoon: nil,
+        statcast: .preview
     )
     .preferredColorScheme(.dark)
 }

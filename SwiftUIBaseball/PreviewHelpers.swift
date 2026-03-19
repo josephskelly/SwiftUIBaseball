@@ -5,7 +5,7 @@
 
 #if DEBUG
 import Foundation
-import SwiftBaseball
+@testable import SwiftBaseball
 
 // MARK: - Date-aware decoder for previews
 
@@ -217,5 +217,30 @@ extension PitcherPlatoonStats {
         """.utf8))
         return PitcherPlatoonStats(vsLeft: vsLeft, vsRight: vsRight)
     }()
+}
+
+// MARK: - StatcastBatting mock
+
+extension StatcastBatting {
+    /// Mock Statcast data modeled on Aaron Judge's 2024 batted-ball profile.
+    static let preview = StatcastBatting(
+        battedBallEvents: 392,
+        groundBalls: 130,
+        flyBalls: 145,
+        lineDrives: 88,
+        popups: 29,
+        gbPercent: 0.332,
+        fbPercent: 0.370,
+        ldPercent: 0.224,
+        popupPercent: 0.074,
+        avgExitVelocity: 95.9,
+        maxExitVelocity: 116.9,
+        avgLaunchAngle: 17.2,
+        barrelRate: 0.223,
+        hardHitRate: 0.598,
+        xBA: 0.310,
+        xSLG: 0.680,
+        xwOBA: 0.448
+    )
 }
 #endif

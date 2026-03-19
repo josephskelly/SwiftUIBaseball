@@ -18,6 +18,7 @@ struct GameDetailView: View {
     @State private var players: [Int: Player] = [:]
     @State private var batterPlatoon: [Int: PlayerPlatoonStats] = [:]
     @State private var pitcherPlatoon: [Int: PitcherPlatoonStats] = [:]
+    @State private var statcastBatting: [Int: StatcastBatting] = [:]
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var selectedRosterEntry: RosterEntry?
@@ -124,7 +125,8 @@ struct GameDetailView: View {
                 player: players[entry.id],
                 stats: playerStats[entry.id],
                 batterPlatoon: batterPlatoon[entry.id],
-                pitcherPlatoon: pitcherPlatoon[entry.id]
+                pitcherPlatoon: pitcherPlatoon[entry.id],
+                statcast: statcastBatting[entry.id]
             )
         }
     }
@@ -211,12 +213,13 @@ struct GameDetailView: View {
     private func loadRosters() async {
         // Warm path: return immediately from cache.
         if let cached = await StatsCache.shared.entry(for: game.id) {
-            awayRoster    = cached.awayRoster
-            homeRoster    = cached.homeRoster
-            players       = cached.players
-            playerStats   = cached.playerStats
-            batterPlatoon = cached.batterPlatoon
-            pitcherPlatoon = cached.pitcherPlatoon
+            awayRoster      = cached.awayRoster
+            homeRoster      = cached.homeRoster
+            players         = cached.players
+            playerStats     = cached.playerStats
+            batterPlatoon   = cached.batterPlatoon
+            pitcherPlatoon  = cached.pitcherPlatoon
+            statcastBatting = cached.statcastBatting
             return
         }
 
@@ -251,7 +254,8 @@ struct GameDetailView: View {
                 players: players,
                 playerStats: playerStats,
                 batterPlatoon: batterPlatoon,
-                pitcherPlatoon: pitcherPlatoon
+                pitcherPlatoon: pitcherPlatoon,
+                statcastBatting: statcastBatting
             ),
             for: game.id
         )
@@ -259,7 +263,7 @@ struct GameDetailView: View {
 
     private func loadPlayerStats(for entries: [RosterEntry]) async {
         let season = statsSeasonYear
-        await withTaskGroup(of: (Int, Player?, PlayerSeasonStats?, PlayerPlatoonStats?, PitcherPlatoonStats?).self) { group in
+        await withTaskGroup(of: (Int, Player?, PlayerSeasonStats?, PlayerPlatoonStats?, PitcherPlatoonStats?, StatcastBatting?).self) { group in
             for entry in entries {
                 let isPitcher = entry.position == .pitcher
                 group.addTask {
@@ -294,15 +298,25 @@ struct GameDetailView: View {
                         }
                     }
 
+                    // Statcast batted-ball data — batters only
+                    var sc: StatcastBatting?
+                    if !isPitcher {
+                        sc = try? await SwiftBaseball
+                            .statcastBatting(playerId: entry.id)
+                            .season(season)
+                            .fetch()
+                    }
+
                     let player = try? await playerResult
-                    return (entry.id, player, stats, bPlatoon, pPlatoon)
+                    return (entry.id, player, stats, bPlatoon, pPlatoon, sc)
                 }
             }
-            for await (id, player, stats, bPlatoon, pPlatoon) in group {
+            for await (id, player, stats, bPlatoon, pPlatoon, sc) in group {
                 if let player { players[id] = player }
                 if let stats { playerStats[id] = stats }
                 if let bPlatoon { batterPlatoon[id] = bPlatoon }
                 if let pPlatoon { pitcherPlatoon[id] = pPlatoon }
+                if let sc { statcastBatting[id] = sc }
             }
         }
     }
