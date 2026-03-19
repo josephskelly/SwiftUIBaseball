@@ -107,6 +107,7 @@ struct GameDetailView: View {
                     }
                 } header: {
                     rosterHeader(title: "Position Players", isPitcher: false)
+                        .padding(.trailing, 20)
                 }
             }
             if !pitchers.isEmpty {
@@ -120,6 +121,7 @@ struct GameDetailView: View {
                     }
                 } header: {
                     rosterHeader(title: "Pitchers", isPitcher: true)
+                        .padding(.trailing, 20)
                 }
             }
         }
