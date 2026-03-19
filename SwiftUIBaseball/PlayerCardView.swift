@@ -29,6 +29,7 @@ struct PlayerCardView: View {
     let season: Int
 
     @State private var statcast: StatcastBatting?
+    @State private var isLoadingStatcast = false
     @Environment(\.dismiss) private var dismiss
 
     private var isPitcher: Bool { entry.position == .pitcher }
@@ -55,6 +56,11 @@ struct PlayerCardView: View {
 
                     if let statcast {
                         statcastSection(statcast)
+                    } else if isLoadingStatcast {
+                        cardSection(title: "Statcast") {
+                            ProgressView()
+                                .frame(maxWidth: .infinity, alignment: .center)
+                        }
                     }
                 }
                 .padding()
@@ -75,10 +81,12 @@ struct PlayerCardView: View {
     /// Fetches Statcast batted-ball data for position players on card appear.
     private func loadStatcast() async {
         guard !isPitcher else { return }
+        isLoadingStatcast = true
         statcast = try? await SwiftBaseball
             .statcastBatting(playerId: entry.id)
             .season(season)
             .fetch()
+        isLoadingStatcast = false
     }
 
     // MARK: - Header
