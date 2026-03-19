@@ -138,15 +138,20 @@ struct GameDetailView: View {
                 .gridColumnAlignment(.leading)
 
             sortButton("Name", field: .name)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .gridCellColumns(isWide ? 1 : 3)
                 .gridColumnAlignment(.leading)
 
             if isWide {
+                Color.clear
+                    .gridCellUnsizedAxes([.horizontal, .vertical])
+
                 sortButton("vL", field: .vsLeft, alignment: .trailing)
                     .gridColumnAlignment(.trailing)
                 sortButton("vR", field: .vsRight, alignment: .trailing)
                     .gridColumnAlignment(.trailing)
+            } else {
+                Color.clear
+                    .gridCellUnsizedAxes([.horizontal, .vertical])
+                    .gridCellColumns(3)
             }
 
             sortButton("OPS", field: .ops, alignment: .trailing)
@@ -168,10 +173,11 @@ struct GameDetailView: View {
                     .foregroundStyle(.secondary)
 
                 Text(abbreviatedName(entry.person.fullName))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .gridCellColumns(isWide ? 1 : 3)
 
                 if isWide {
+                    Color.clear
+                        .gridCellUnsizedAxes([.horizontal, .vertical])
+
                     splitOPSLabel(
                         isPitcher
                             ? pitcherPlatoon[entry.id]?.vsLeft?.ops
@@ -184,6 +190,10 @@ struct GameDetailView: View {
                             : batterPlatoon[entry.id]?.vsRight?.ops,
                         prefix: "vR"
                     )
+                } else {
+                    Color.clear
+                        .gridCellUnsizedAxes([.horizontal, .vertical])
+                        .gridCellColumns(3)
                 }
 
                 opsCell(entry: entry, isPitcher: isPitcher)
@@ -281,6 +291,7 @@ struct GameDetailView: View {
         }
         .font(.caption)
         .foregroundStyle(ops == nil ? .tertiary : .secondary)
+        .frame(maxWidth: 80)
     }
 
     /// Returns the last whitespace-delimited word of a player's full name.
