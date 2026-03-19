@@ -27,6 +27,10 @@ struct PlayerCardView: View {
     let pitcherPlatoon: PitcherPlatoonStats?
     /// The season year used to fetch Statcast data on demand.
     let season: Int
+    /// Pre-fetched Statcast batting data from the roster grid's background loader.
+    let preloadedStatcast: StatcastBatting?
+    /// Pre-fetched Statcast pitching data from the roster grid's background loader.
+    let preloadedStatcastPitching: StatcastPitching?
 
     @State private var statcast: StatcastBatting?
     @State private var statcastPitching: StatcastPitching?
@@ -111,6 +115,10 @@ struct PlayerCardView: View {
 
     /// Fetches Statcast batted-ball data for position players.
     private func loadStatcastBatting() async {
+        if let preloadedStatcast {
+            statcast = preloadedStatcast
+            return
+        }
         if let cached = await StatsCache.shared.statcast(playerId: entry.id, season: season) {
             statcast = cached
             return
@@ -128,6 +136,10 @@ struct PlayerCardView: View {
 
     /// Fetches Statcast pitching data (batted ball against + pitch arsenal).
     private func loadStatcastPitching() async {
+        if let preloadedStatcastPitching {
+            statcastPitching = preloadedStatcastPitching
+            return
+        }
         if let cached = await StatsCache.shared.statcastPitching(playerId: entry.id, season: season) {
             statcastPitching = cached
             return
@@ -553,7 +565,9 @@ struct PlayerCardView: View {
         stats: .previewBatting,
         batterPlatoon: .preview,
         pitcherPlatoon: nil,
-        season: 2024
+        season: 2024,
+        preloadedStatcast: nil,
+        preloadedStatcastPitching: nil
     )
 }
 
@@ -564,7 +578,9 @@ struct PlayerCardView: View {
         stats: .previewPitching,
         batterPlatoon: nil,
         pitcherPlatoon: .preview,
-        season: 2023
+        season: 2023,
+        preloadedStatcast: nil,
+        preloadedStatcastPitching: nil
     )
 }
 
@@ -575,7 +591,9 @@ struct PlayerCardView: View {
         stats: nil,
         batterPlatoon: nil,
         pitcherPlatoon: nil,
-        season: 2024
+        season: 2024,
+        preloadedStatcast: nil,
+        preloadedStatcastPitching: nil
     )
 }
 
@@ -586,7 +604,9 @@ struct PlayerCardView: View {
         stats: .previewBatting,
         batterPlatoon: .preview,
         pitcherPlatoon: nil,
-        season: 2024
+        season: 2024,
+        preloadedStatcast: nil,
+        preloadedStatcastPitching: nil
     )
     .preferredColorScheme(.dark)
 }
