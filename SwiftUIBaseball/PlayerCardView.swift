@@ -68,6 +68,7 @@ struct PlayerCardView: View {
                             Text("No \(season) season stats available.")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
                         }
                     }
                 }
