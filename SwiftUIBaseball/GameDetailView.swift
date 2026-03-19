@@ -236,6 +236,8 @@ struct GameDetailView: View {
                         .imageScale(.small)
                 }
             }
+            .frame(minWidth: 44, minHeight: 44)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(sortAccessibilityLabel(label, field: field))
