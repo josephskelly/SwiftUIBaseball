@@ -150,6 +150,7 @@ struct GameDetailView: View {
                 .gridColumnAlignment(.leading)
 
             sortButton("Name", field: .name)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .gridColumnAlignment(.leading)
 
             if isWide {
@@ -160,10 +161,6 @@ struct GameDetailView: View {
                     .gridColumnAlignment(.trailing)
                 sortButton("vR", field: .vsRight, alignment: .trailing)
                     .gridColumnAlignment(.trailing)
-            } else {
-                Color.clear
-                    .gridCellUnsizedAxes([.horizontal, .vertical])
-                    .gridCellColumns(5)
             }
 
             sortButton("OPS", field: .ops, alignment: .trailing)
@@ -192,6 +189,7 @@ struct GameDetailView: View {
                     .foregroundStyle(.secondary)
 
                 Text(abbreviatedName(entry.person.fullName))
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
                 if isWide {
                     Color.clear
@@ -209,10 +207,6 @@ struct GameDetailView: View {
                             : batterPlatoon[entry.id]?.vsRight?.ops,
                         prefix: "vR"
                     )
-                } else {
-                    Color.clear
-                        .gridCellUnsizedAxes([.horizontal, .vertical])
-                        .gridCellColumns(5)
                 }
 
                 opsCell(entry: entry, isPitcher: isPitcher)
