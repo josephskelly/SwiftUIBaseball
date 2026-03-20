@@ -95,3 +95,11 @@ xcodebuild test \
 ```
 
 Or press **⌘U** in Xcode.
+
+## Disclaimer
+
+This project is not affiliated with, endorsed by, or sponsored by Major League Baseball (MLB), Baseball Savant, or any MLB team. All MLB team names, logos, and trademarks are the property of their respective owners and are used here solely for informational purposes.
+
+Player statistics, schedules, and Statcast data are retrieved from publicly available MLB Stats API and Baseball Savant endpoints. This data is provided by MLB and is subject to MLB's terms of use. This project is intended for personal, educational, and demonstration purposes only — not for commercial use.
+
+Use of MLB data is governed by the [MLB Terms of Use](https://www.mlb.com/official-information/terms-of-use). Users of this project are responsible for ensuring their own compliance with those terms.
