@@ -8,6 +8,48 @@ import Testing
 import SwiftBaseball
 @testable import SwiftUIBaseball
 
+// MARK: - RosterSource.cacheKey
+
+struct RosterSourceCacheKeyTests {
+
+    /// Helper: decode a minimal ``ScheduleEntry`` from JSON with the given gamePk.
+    private static func makeEntry(gamePk: Int) -> ScheduleEntry {
+        let json = """
+        {
+            "gamePk": \(gamePk),
+            "gameDate": "2025-06-15T23:05:00Z",
+            "status": "Final",
+            "teams": {
+                "away": { "team": { "id": 119, "name": "Dodgers" } },
+                "home": { "team": { "id": 116, "name": "Tigers" } }
+            },
+            "gameType": "R",
+            "season": "2025"
+        }
+        """
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return try! decoder.decode(ScheduleEntry.self, from: Data(json.utf8))
+    }
+
+    @Test func gameSourceUsesGamePk() {
+        let entry = Self.makeEntry(gamePk: 745123)
+        let source = RosterSource.game(entry)
+        #expect(source.cacheKey == 745123)
+    }
+
+    @Test func teamWithGameUsesGamePk() {
+        let entry = Self.makeEntry(gamePk: 745456)
+        let source = RosterSource.team(id: 119, name: "Dodgers", game: entry)
+        #expect(source.cacheKey == 745456)
+    }
+
+    @Test func teamWithoutGameFallsBackToTeamId() {
+        let source = RosterSource.team(id: 119, name: "Dodgers", game: nil)
+        #expect(source.cacheKey == 119)
+    }
+}
+
 // MARK: - formatOPS
 
 struct FormatOPSTests {

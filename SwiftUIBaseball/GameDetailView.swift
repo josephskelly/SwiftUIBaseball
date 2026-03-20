@@ -20,6 +20,16 @@ enum RosterSource {
     case game(ScheduleEntry)
     /// Single-team entry from the teams list, with an optional game for the opponent tab.
     case team(id: Int, name: String, game: ScheduleEntry?)
+
+    /// Stable cache key: gamePk when available, otherwise teamId.
+    ///
+    /// These ID spaces don't collide — gamePk is ~700 000+ while teamIds are 100–160.
+    var cacheKey: Int {
+        switch self {
+        case .game(let entry): entry.id
+        case .team(let id, _, let game): game?.id ?? id
+        }
+    }
 }
 
 struct GameDetailView: View {
@@ -124,14 +134,6 @@ struct GameDetailView: View {
         switch source {
         case .game(let entry): entry.gameType
         case .team(_, _, let game): game?.gameType ?? .regularSeason
-        }
-    }
-
-    /// Cache key for the StatsCache (uses gamePk when available).
-    private var cacheKey: Int? {
-        switch source {
-        case .game(let entry): entry.id
-        case .team(_, _, let game): game?.id
         }
     }
 
@@ -487,7 +489,7 @@ struct GameDetailView: View {
 
     private func loadRosters() async {
         // Warm path: return immediately from cache.
-        if let key = cacheKey, let cached = await StatsCache.shared.entry(for: key) {
+        if let cached = await StatsCache.shared.entry(for: source.cacheKey) {
             primaryRoster  = cached.awayRoster
             secondaryRoster = cached.homeRoster
             players        = cached.players
@@ -501,12 +503,14 @@ struct GameDetailView: View {
         errorMessage = nil
 
         do {
-            let primaryResult = try await SwiftBaseball.roster(teamId: primaryTeamId, season: seasonYear).fetch()
-            primaryRoster = primaryResult
+            async let primaryFetch = SwiftBaseball.roster(teamId: primaryTeamId, season: seasonYear).fetch()
 
             if let secondaryId = secondaryTeamId {
-                let secondaryResult = try await SwiftBaseball.roster(teamId: secondaryId, season: seasonYear).fetch()
-                secondaryRoster = secondaryResult
+                async let secondaryFetch = SwiftBaseball.roster(teamId: secondaryId, season: seasonYear).fetch()
+                primaryRoster = try await primaryFetch
+                secondaryRoster = try await secondaryFetch
+            } else {
+                primaryRoster = try await primaryFetch
             }
         } catch {
             errorMessage = error.localizedDescription
@@ -522,7 +526,7 @@ struct GameDetailView: View {
 
         // Only write L1 cache when every player succeeded; partial data would
         // block re-fetches on next visit. Per-player L2 still caches successes.
-        if failedIds.isEmpty, let key = cacheKey {
+        if failedIds.isEmpty {
             await StatsCache.shared.set(
                 StatsCache.Entry(
                     awayRoster: primaryRoster,
@@ -532,7 +536,7 @@ struct GameDetailView: View {
                     batterPlatoon: batterPlatoon,
                     pitcherPlatoon: pitcherPlatoon
                 ),
-                for: key
+                for: source.cacheKey
             )
         }
 
@@ -545,9 +549,7 @@ struct GameDetailView: View {
         statcastTask?.cancel()
 
         // Evict L1 entry so loadRosters bypasses the warm path.
-        if let key = cacheKey {
-            await StatsCache.shared.removeEntry(for: key)
-        }
+        await StatsCache.shared.removeEntry(for: source.cacheKey)
 
         // Clear all state so the view shows fresh data only.
         players = [:]
