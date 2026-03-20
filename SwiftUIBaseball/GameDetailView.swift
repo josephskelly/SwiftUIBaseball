@@ -167,7 +167,9 @@ struct GameDetailView: View {
             }
         }
         .navigationTitle(navigationTitle)
+        #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
+        #endif
         .task {
             await loadRosters()
         }

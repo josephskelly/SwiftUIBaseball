@@ -97,9 +97,11 @@ struct PlayerCardView: View {
                 .padding()
             }
             .navigationTitle(entry.person.fullName)
+            #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
+            #endif
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItem(placement: .navigation) {
                     Button {
                         isFavorited = FavoriteItem.toggle(
                             kind: .player,

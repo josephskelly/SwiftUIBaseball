@@ -23,7 +23,7 @@ A demo SwiftUI app showcasing the [SwiftBaseball](https://github.com/josephskell
 | Tool | Version |
 |------|---------|
 | Xcode | 16.0 or later |
-| iOS deployment target | iOS 17.0+ |
+| Deployment target | iOS 17.0+ / macOS 14.0+ |
 | Swift | 6.0+ |
 | macOS (build machine) | Sonoma (14) or later |
 
@@ -95,9 +95,17 @@ SwiftUIBaseball/
 ## Running Tests
 
 ```bash
+# macOS (no simulator required)
 xcodebuild test \
   -scheme SwiftUIBaseball \
-  -destination 'platform=iOS Simulator,name=iPhone 16'
+  -destination 'platform=macOS' \
+  -only-testing:SwiftUIBaseballTests
+
+# iOS Simulator
+xcodebuild test \
+  -scheme SwiftUIBaseball \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+  -only-testing:SwiftUIBaseballTests
 ```
 
 Or press **⌘U** in Xcode.
