@@ -206,7 +206,7 @@ struct PlayerCardView: View {
                         .season(season)
                         .gameType(gt)
                         .fetch(),
-                       splits.vsLeft?.effectiveOPS != nil || splits.vsRight?.effectiveOPS != nil {
+                       splits.vsLeft?.ops != nil || splits.vsRight?.ops != nil {
                         pitcherPlatoon = splits
                     }
                 } else {
@@ -215,7 +215,7 @@ struct PlayerCardView: View {
                         .season(season)
                         .gameType(gt)
                         .fetch(),
-                       splits.vsLeft?.effectiveOPS != nil || splits.vsRight?.effectiveOPS != nil {
+                       splits.vsLeft?.ops != nil || splits.vsRight?.ops != nil {
                         batterPlatoon = splits
                     }
                 }
@@ -559,7 +559,7 @@ struct PlayerCardView: View {
             platoonCell(stats?.avg.map { formatRate($0) })
             platoonCell(stats?.obp.map { formatRate($0) })
             platoonCell(stats?.slg.map { formatRate($0) })
-            platoonCell(stats?.effectiveOPS.map { formatRate($0) })
+            platoonCell(stats?.ops.map { formatRate($0) })
         }
         .padding(.vertical, 6)
     }
@@ -572,7 +572,7 @@ struct PlayerCardView: View {
             platoonCell(stats?.era.map { String(format: "%.2f", $0) })
             platoonCell(stats?.whip.map { String(format: "%.2f", $0) })
             platoonCell(stats?.strikeOuts.map { "\($0)" })
-            platoonCell(stats?.effectiveOPS.map { formatRate($0) })
+            platoonCell(stats?.ops.map { formatRate($0) })
         }
         .padding(.vertical, 6)
     }
