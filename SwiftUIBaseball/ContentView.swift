@@ -65,11 +65,8 @@ struct ContentView: View {
                 }
             }
             .navigationTitle("Teams")
-            .task {
-                async let teams: () = loadTeamsIfNeeded()
-                async let schedule: () = loadScheduleInBackground()
-                _ = await (teams, schedule)
-            }
+            .task { await loadTeamsIfNeeded() }
+            .task { await loadScheduleInBackground() }
             .refreshable {
                 async let teams: () = refreshTeams()
                 async let schedule: () = loadScheduleInBackground()
@@ -228,12 +225,14 @@ struct ContentView: View {
     }
 
     /// Fetches all MLB teams from the API and upserts into SwiftData on a background context.
+    ///
+    /// The entire network call and SwiftData upsert run inside a detached task
+    /// so no work executes on the main actor.
     private func refreshTeams() async {
-        let season = Calendar.current.component(.year, from: Date())
-        guard let teams = try? await SwiftBaseball.teams(.all(season: season)).fetch() else { return }
-
         let container = modelContext.container
+        let season = Calendar.current.component(.year, from: Date())
         await Task.detached {
+            guard let teams = try? await SwiftBaseball.teams(.all(season: season)).fetch() else { return }
             let bgContext = ModelContext(container)
             for team in teams {
                 let id = team.id
@@ -262,9 +261,12 @@ struct ContentView: View {
         }.value
     }
 
-    /// Loads today's schedule in the background for game status display.
+    /// Loads today's schedule in the background without blocking the main actor.
     private func loadScheduleInBackground() async {
-        guard let result = try? await SwiftBaseball.schedule(.date(todayString)).fetch() else { return }
+        let today = todayString
+        guard let result = try? await Task.detached(operation: {
+            try await SwiftBaseball.schedule(.date(today)).fetch()
+        }).value else { return }
         games = result
     }
 }
