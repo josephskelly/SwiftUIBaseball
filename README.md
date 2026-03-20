@@ -9,7 +9,7 @@ A demo SwiftUI app showcasing the [SwiftBaseball](https://github.com/josephskell
 - **Favorite player cards load instantly** for previously viewed players — bio, stats, and platoon splits are served from the persistent cache without network calls
 - Teams list with today's game status shown inline — scheduled games display the start time in the device's local time zone (e.g. "7:05 PM") instead of a generic "Scheduled" label
 - Tap any team to view its roster; if playing today, opponent roster available as a tab
-- Per-player OPS stats (batting or pitching) matching the game type (spring training stats for spring training games, regular season for regular season, etc.)
+- Per-player OPS stats (batting or pitching) matching the game type (spring training stats for spring training games, regular season for regular season, etc.) — platoon split OPS is computed from OBP + SLG when the API omits the pre-computed OPS field (common during spring training), so vL/vR columns show actual values instead of dashes
 - Sortable roster columns using a `Grid` layout: tap any column header (Name, OPS, vL, vR, Handedness) to sort ascending/descending with a chevron indicator
 - GB% and FB% columns in the roster grid (landscape / wide layouts), loaded progressively from Baseball Savant in the background with player-card-open prioritization
 - Statcast batted-ball data on batter cards: exit velocity, launch angle, barrel rate, hard-hit rate, batted-ball distribution, and expected stats (xBA, xSLG, xwOBA)

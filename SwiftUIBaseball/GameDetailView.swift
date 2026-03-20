@@ -307,14 +307,14 @@ struct GameDetailView: View {
 
                     splitOPSLabel(
                         isPitcher
-                            ? pitcherPlatoon[entry.id]?.vsLeft?.ops
-                            : batterPlatoon[entry.id]?.vsLeft?.ops,
+                            ? pitcherPlatoon[entry.id]?.vsLeft?.effectiveOPS
+                            : batterPlatoon[entry.id]?.vsLeft?.effectiveOPS,
                         prefix: "vL"
                     )
                     splitOPSLabel(
                         isPitcher
-                            ? pitcherPlatoon[entry.id]?.vsRight?.ops
-                            : batterPlatoon[entry.id]?.vsRight?.ops,
+                            ? pitcherPlatoon[entry.id]?.vsRight?.effectiveOPS
+                            : batterPlatoon[entry.id]?.vsRight?.effectiveOPS,
                         prefix: "vR"
                     )
                 }
@@ -605,7 +605,7 @@ struct GameDetailView: View {
                             .season(season)
                             .gameType(gt)
                             .fetch(),
-                           result.vsLeft?.ops != nil || result.vsRight?.ops != nil {
+                           result.vsLeft?.effectiveOPS != nil || result.vsRight?.effectiveOPS != nil {
                             pPlatoon = result
                         }
                     } else {
@@ -614,7 +614,7 @@ struct GameDetailView: View {
                             .season(season)
                             .gameType(gt)
                             .fetch(),
-                           result.vsLeft?.ops != nil || result.vsRight?.ops != nil {
+                           result.vsLeft?.effectiveOPS != nil || result.vsRight?.effectiveOPS != nil {
                             bPlatoon = result
                         }
                     }
@@ -798,10 +798,10 @@ private func platoonOPS(
 ) -> Double? {
     if isPitcher {
         let splits = pitcher[entry.id]
-        return vsLeft ? splits?.vsLeft?.ops : splits?.vsRight?.ops
+        return vsLeft ? splits?.vsLeft?.effectiveOPS : splits?.vsRight?.effectiveOPS
     } else {
         let splits = batter[entry.id]
-        return vsLeft ? splits?.vsLeft?.ops : splits?.vsRight?.ops
+        return vsLeft ? splits?.vsLeft?.effectiveOPS : splits?.vsRight?.effectiveOPS
     }
 }
 
