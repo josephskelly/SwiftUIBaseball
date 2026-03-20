@@ -182,6 +182,55 @@ struct CachedTeamSeedTests {
     }
 }
 
+// MARK: - withRetry Tests
+
+/// Tests for the ``withRetry`` transient-error recovery utility.
+struct WithRetryTests {
+
+    /// A counter-based error used to simulate transient failures.
+    private struct TransientError: Error {}
+
+    @Test func succeedsOnFirstAttempt() async {
+        let result = await withRetry { 42 }
+        #expect(result == 42)
+    }
+
+    @Test func retriesOnceAndSucceeds() async {
+        let counter = Counter()
+        let result = await withRetry {
+            let n = await counter.increment()
+            if n == 1 { throw TransientError() }
+            return n
+        }
+        #expect(result == 2)
+    }
+
+    @Test func returnsNilAfterAllAttemptsFail() async {
+        let result: Int? = await withRetry { throw TransientError() }
+        #expect(result == nil)
+    }
+
+    @Test func skipsRetryForBadURL() async {
+        let counter = Counter()
+        let result: Int? = await withRetry {
+            await counter.increment()
+            throw URLError(.badURL)
+        }
+        #expect(result == nil)
+        let count = await counter.value
+        #expect(count == 1)
+    }
+}
+
+/// Thread-safe counter for tracking call counts inside `@Sendable` closures.
+private actor Counter {
+    var value = 0
+    func increment() -> Int {
+        value += 1
+        return value
+    }
+}
+
 // MARK: - TTL Tests
 
 /// Serialized to prevent races on the shared `StatsCache.modelContainer` static.

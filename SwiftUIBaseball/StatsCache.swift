@@ -23,6 +23,19 @@ actor StatsCache {
     /// The SwiftData container for L2 persistence. Set from app init.
     static var modelContainer: ModelContainer?
 
+    /// Lazily created `ModelContext` scoped to this actor instance.
+    ///
+    /// Reads from ``modelContainer`` on first access so test suites that
+    /// set the static before creating a fresh `StatsCache()` get isolated contexts.
+    private var _context: ModelContext?
+    private var context: ModelContext? {
+        if let _context { return _context }
+        guard let container = Self.modelContainer else { return nil }
+        let ctx = ModelContext(container)
+        _context = ctx
+        return ctx
+    }
+
     /// All data needed to populate a ``GameDetailView`` without network calls.
     struct Entry: Sendable {
         /// Away team's active roster.
@@ -112,8 +125,7 @@ actor StatsCache {
         batterPlatoon: PlayerPlatoonStats?,
         pitcherPlatoon: PitcherPlatoonStats?
     )? {
-        guard let container = Self.modelContainer else { return nil }
-        let context = ModelContext(container)
+        guard let context else { return nil }
         let key = "\(id)-\(season)"
         let descriptor = FetchDescriptor<CachedPlayerData>(
             predicate: #Predicate { $0.cacheKey == key }
@@ -159,8 +171,7 @@ actor StatsCache {
     ) {
         // Don't create empty records — they poison the cache for 24 hours.
         guard player != nil || stats != nil || batterPlatoon != nil || pitcherPlatoon != nil else { return }
-        guard let container = Self.modelContainer else { return }
-        let context = ModelContext(container)
+        guard let context else { return }
         let key = "\(id)-\(season)"
         let descriptor = FetchDescriptor<CachedPlayerData>(
             predicate: #Predicate { $0.cacheKey == key }
@@ -183,4 +194,32 @@ actor StatsCache {
 
         try? context.save()
     }
+}
+
+/// Retries an async throwing operation once on transient errors.
+///
+/// Returns `nil` when all attempts fail. Permanent URL errors
+/// (`.badURL`, `.unsupportedURL`) skip the retry to avoid wasting time.
+///
+/// - Parameters:
+///   - maxAttempts: Total number of attempts (default 2 = one retry).
+///   - operation: The async throwing closure to execute.
+/// - Returns: The result on success, or `nil` if all attempts fail.
+func withRetry<T: Sendable>(
+    maxAttempts: Int = 2,
+    _ operation: @Sendable () async throws -> T
+) async -> T? {
+    for attempt in 1...maxAttempts {
+        do {
+            return try await operation()
+        } catch let urlError as URLError
+            where urlError.code == .badURL || urlError.code == .unsupportedURL {
+            return nil
+        } catch {
+            if attempt < maxAttempts {
+                try? await Task.sleep(for: .milliseconds(500))
+            }
+        }
+    }
+    return nil
 }

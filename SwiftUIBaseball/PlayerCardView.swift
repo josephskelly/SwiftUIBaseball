@@ -165,8 +165,13 @@ struct PlayerCardView: View {
     ///
     /// Checks the SwiftData persistent cache first. Falls back to the network
     /// for any missing or stale data.
+    /// Fetches player bio, season stats, and platoon splits when not pre-populated.
+    ///
+    /// Uses `||` so partial data (e.g. player bio present but stats missing)
+    /// still triggers a fetch for the missing piece. Individual fetches are
+    /// gated so already-populated fields are not re-requested.
     private func loadMLBData() async {
-        guard player == nil && stats == nil else { return }
+        guard player == nil || stats == nil else { return }
 
         // Check SwiftData L2 cache before hitting the network.
         if let cached = await StatsCache.shared.cachedPlayer(id: entry.id, season: season) {
@@ -174,7 +179,6 @@ struct PlayerCardView: View {
             if let s = cached.stats { stats = s }
             if let bp = cached.batterPlatoon { batterPlatoon = bp }
             if let pp = cached.pitcherPlatoon { pitcherPlatoon = pp }
-            // If we got at least player bio, we can skip the network call.
             if player != nil && stats != nil {
                 return
             }
@@ -184,42 +188,53 @@ struct PlayerCardView: View {
 
         let statGroup: StatGroup = isPitcher ? .pitching : .batting
 
-        async let playerResult = SwiftBaseball.player(id: entry.id).fetch()
+        // Only fetch what's missing.
+        if player == nil {
+            player = await withRetry {
+                try await SwiftBaseball.player(id: entry.id).fetch()
+            }
+        }
 
-        // Try each game type in priority order until we find stats.
-        // During spring training the regular-season endpoint returns nothing.
-        player = try? await playerResult
-
-        for gt in [GameType.regularSeason, .springTraining] {
-            if let result = try? await SwiftBaseball
-                .playerStats(id: entry.id)
-                .season(season)
-                .group(statGroup)
-                .gameType(gt)
-                .fetch().first {
-                stats = result
-
-                // Fetch platoon splits for the same game type.
-                if isPitcher {
-                    if let splits = try? await SwiftBaseball
-                        .pitcherPlatoonStats(id: entry.id)
+        if stats == nil {
+            // Try each game type in priority order until we find stats.
+            // During spring training the regular-season endpoint returns nothing.
+            for gt in [GameType.regularSeason, .springTraining] {
+                if let result = await withRetry({
+                    try await SwiftBaseball
+                        .playerStats(id: entry.id)
                         .season(season)
+                        .group(statGroup)
                         .gameType(gt)
-                        .fetch(),
-                       splits.vsLeft?.ops != nil || splits.vsRight?.ops != nil {
-                        pitcherPlatoon = splits
+                        .fetch().first
+                }).flatMap({ $0 }) {
+                    stats = result
+
+                    // Fetch platoon splits for the same game type.
+                    if isPitcher {
+                        if let splits = await withRetry({
+                            try await SwiftBaseball
+                                .pitcherPlatoonStats(id: entry.id)
+                                .season(season)
+                                .gameType(gt)
+                                .fetch()
+                        }),
+                           splits.vsLeft?.ops != nil || splits.vsRight?.ops != nil {
+                            pitcherPlatoon = splits
+                        }
+                    } else {
+                        if let splits = await withRetry({
+                            try await SwiftBaseball
+                                .playerPlatoonStats(id: entry.id)
+                                .season(season)
+                                .gameType(gt)
+                                .fetch()
+                        }),
+                           splits.vsLeft?.ops != nil || splits.vsRight?.ops != nil {
+                            batterPlatoon = splits
+                        }
                     }
-                } else {
-                    if let splits = try? await SwiftBaseball
-                        .playerPlatoonStats(id: entry.id)
-                        .season(season)
-                        .gameType(gt)
-                        .fetch(),
-                       splits.vsLeft?.ops != nil || splits.vsRight?.ops != nil {
-                        batterPlatoon = splits
-                    }
+                    break
                 }
-                break
             }
         }
 

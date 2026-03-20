@@ -518,10 +518,11 @@ struct GameDetailView: View {
         isLoading = false
 
         let allEntries = primaryRoster + secondaryRoster
-        await loadPlayerStats(for: allEntries)
+        let failedIds = await loadPlayerStats(for: allEntries)
 
-        // Cache after stats are complete so re-visits are instant and fully populated.
-        if let key = cacheKey {
+        // Only write L1 cache when every player succeeded; partial data would
+        // block re-fetches on next visit. Per-player L2 still caches successes.
+        if failedIds.isEmpty, let key = cacheKey {
             await StatsCache.shared.set(
                 StatsCache.Entry(
                     awayRoster: primaryRoster,
@@ -562,9 +563,18 @@ struct GameDetailView: View {
         await loadRosters()
     }
 
-    private func loadPlayerStats(for entries: [RosterEntry]) async {
+    /// Fetches player bio, season stats, and platoon splits for roster entries.
+    ///
+    /// Processes players in chunks of 6 to avoid MLB API rate limits (~18
+    /// concurrent HTTP requests max per chunk). Uses ``withRetry`` for
+    /// transient error recovery.
+    ///
+    /// - Returns: The set of player IDs that failed after retry.
+    @discardableResult
+    private func loadPlayerStats(for entries: [RosterEntry]) async -> Set<Int> {
         let season = seasonYear
         let gt = gameType
+        let chunkSize = 6
 
         // Partition into cached (from SwiftData L2) and uncached entries.
         var entriesToFetch: [RosterEntry] = []
@@ -579,64 +589,83 @@ struct GameDetailView: View {
             }
         }
 
-        guard !entriesToFetch.isEmpty else { return }
+        guard !entriesToFetch.isEmpty else { return [] }
 
-        await withTaskGroup(of: (Int, Player?, PlayerSeasonStats?, PlayerPlatoonStats?, PitcherPlatoonStats?).self) { group in
-            for entry in entriesToFetch {
-                let isPitcher = entry.position == .pitcher
-                group.addTask {
-                    let statGroup: StatGroup = isPitcher ? .pitching : .batting
-                    async let playerResult = SwiftBaseball.player(id: entry.id).fetch()
+        var failedIds = Set<Int>()
 
-                    // Season stats filtered by game type
-                    let stats = try? await SwiftBaseball
-                        .playerStats(id: entry.id)
-                        .season(season)
-                        .group(statGroup)
-                        .gameType(gt)
-                        .fetch().first
+        for chunk in stride(from: 0, to: entriesToFetch.count, by: chunkSize).map({
+            Array(entriesToFetch[$0..<min($0 + chunkSize, entriesToFetch.count)])
+        }) {
+            await withTaskGroup(of: (Int, Player?, PlayerSeasonStats?, PlayerPlatoonStats?, PitcherPlatoonStats?).self) { group in
+                for entry in chunk {
+                    let isPitcher = entry.position == .pitcher
+                    group.addTask {
+                        let statGroup: StatGroup = isPitcher ? .pitching : .batting
 
-                    // Platoon splits filtered by game type
-                    var bPlatoon: PlayerPlatoonStats?
-                    var pPlatoon: PitcherPlatoonStats?
-                    if isPitcher {
-                        if let result = try? await SwiftBaseball
-                            .pitcherPlatoonStats(id: entry.id)
-                            .season(season)
-                            .gameType(gt)
-                            .fetch(),
-                           result.vsLeft?.ops != nil || result.vsRight?.ops != nil {
-                            pPlatoon = result
+                        let player = await withRetry {
+                            try await SwiftBaseball.player(id: entry.id).fetch()
                         }
-                    } else {
-                        if let result = try? await SwiftBaseball
-                            .playerPlatoonStats(id: entry.id)
-                            .season(season)
-                            .gameType(gt)
-                            .fetch(),
-                           result.vsLeft?.ops != nil || result.vsRight?.ops != nil {
-                            bPlatoon = result
+
+                        let stats = await withRetry {
+                            try await SwiftBaseball
+                                .playerStats(id: entry.id)
+                                .season(season)
+                                .group(statGroup)
+                                .gameType(gt)
+                                .fetch().first
+                        }.flatMap { $0 }
+
+                        var bPlatoon: PlayerPlatoonStats?
+                        var pPlatoon: PitcherPlatoonStats?
+                        if isPitcher {
+                            if let result = await withRetry({
+                                try await SwiftBaseball
+                                    .pitcherPlatoonStats(id: entry.id)
+                                    .season(season)
+                                    .gameType(gt)
+                                    .fetch()
+                            }),
+                               result.vsLeft?.ops != nil || result.vsRight?.ops != nil {
+                                pPlatoon = result
+                            }
+                        } else {
+                            if let result = await withRetry({
+                                try await SwiftBaseball
+                                    .playerPlatoonStats(id: entry.id)
+                                    .season(season)
+                                    .gameType(gt)
+                                    .fetch()
+                            }),
+                               result.vsLeft?.ops != nil || result.vsRight?.ops != nil {
+                                bPlatoon = result
+                            }
                         }
+
+                        return (entry.id, player, stats, bPlatoon, pPlatoon)
+                    }
+                }
+                for await (id, player, stats, bPlatoon, pPlatoon) in group {
+                    if let player { players[id] = player }
+                    if let stats { playerStats[id] = stats }
+                    if let bPlatoon { batterPlatoon[id] = bPlatoon }
+                    if let pPlatoon { pitcherPlatoon[id] = pPlatoon }
+
+                    // Track failures: both player bio and stats nil after retry.
+                    if player == nil && stats == nil {
+                        failedIds.insert(id)
                     }
 
-                    let player = try? await playerResult
-                    return (entry.id, player, stats, bPlatoon, pPlatoon)
+                    // Persist to SwiftData L2
+                    await StatsCache.shared.persistPlayer(
+                        id: id, season: season,
+                        player: player, stats: stats,
+                        batterPlatoon: bPlatoon, pitcherPlatoon: pPlatoon
+                    )
                 }
             }
-            for await (id, player, stats, bPlatoon, pPlatoon) in group {
-                if let player { players[id] = player }
-                if let stats { playerStats[id] = stats }
-                if let bPlatoon { batterPlatoon[id] = bPlatoon }
-                if let pPlatoon { pitcherPlatoon[id] = pPlatoon }
-
-                // Persist to SwiftData L2
-                await StatsCache.shared.persistPlayer(
-                    id: id, season: season,
-                    player: player, stats: stats,
-                    batterPlatoon: bPlatoon, pitcherPlatoon: pPlatoon
-                )
-            }
         }
+
+        return failedIds
     }
 
     // MARK: - Background Statcast Loading
