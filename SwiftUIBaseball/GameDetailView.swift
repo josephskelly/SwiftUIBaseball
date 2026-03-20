@@ -41,14 +41,19 @@ struct GameDetailView: View {
     /// Convenience init for navigating from a game (existing call sites).
     init(game: ScheduleEntry) {
         self.source = .game(game)
+        _selectedSide = State(initialValue: 0)
     }
 
     /// Convenience init for navigating from a team, with an optional game for opponent tab.
     init(teamId: Int, teamName: String, game: ScheduleEntry? = nil) {
-        self.source = .team(id: teamId, name: teamName, game: game)
+        let src = RosterSource.team(id: teamId, name: teamName, game: game)
+        self.source = src
+        // Auto-select the tab for the team the user tapped.
+        let isHome = game?.teams.home.team.id == teamId
+        _selectedSide = State(initialValue: isHome ? 1 : 0)
     }
 
-    @State private var selectedSide: Int = 0
+    @State private var selectedSide: Int
     @State private var primaryRoster: [RosterEntry] = []
     @State private var secondaryRoster: [RosterEntry] = []
     @State private var playerStats: [Int: PlayerSeasonStats] = [:]
@@ -71,50 +76,45 @@ struct GameDetailView: View {
 
     // MARK: - Source-derived Properties
 
-    /// The primary team ID (the team the user navigated to, or the away team).
+    /// The away (primary) team ID — always the away team when a game exists.
     private var primaryTeamId: Int {
         switch source {
-        case .game(let entry): entry.teams.away.team.id
-        case .team(let id, _, _): id
+        case .game(let entry):
+            return entry.teams.away.team.id
+        case .team(let id, _, let game):
+            guard let game else { return id }
+            return game.teams.away.team.id
         }
     }
 
-    /// The primary team name.
+    /// The away (primary) team name.
     private var primaryTeamName: String {
         switch source {
-        case .game(let entry): entry.teams.away.team.name
-        case .team(_, let name, _): name
+        case .game(let entry):
+            return entry.teams.away.team.name
+        case .team(_, let name, let game):
+            guard let game else { return name }
+            return game.teams.away.team.name
         }
     }
 
-    /// The secondary (opponent) team ID, if available.
+    /// The home (secondary) team ID, if a game exists.
     private var secondaryTeamId: Int? {
         switch source {
         case .game(let entry):
             return entry.teams.home.team.id
-        case .team(let id, _, let game):
-            guard let game else { return nil }
-            // The opponent is whichever team is NOT the primary
-            if game.teams.away.team.id == id {
-                return game.teams.home.team.id
-            } else {
-                return game.teams.away.team.id
-            }
+        case .team(_, _, let game):
+            return game?.teams.home.team.id
         }
     }
 
-    /// The secondary (opponent) team name, if available.
+    /// The home (secondary) team name, if a game exists.
     private var secondaryTeamName: String? {
         switch source {
         case .game(let entry):
             return entry.teams.home.team.name
-        case .team(let id, _, let game):
-            guard let game else { return nil }
-            if game.teams.away.team.id == id {
-                return game.teams.home.team.name
-            } else {
-                return game.teams.away.team.name
-            }
+        case .team(_, _, let game):
+            return game?.teams.home.team.name
         }
     }
 
@@ -204,22 +204,12 @@ struct GameDetailView: View {
         #endif
     }
 
-    /// Navigation title showing the matchup with correct home/away prefix.
+    /// Navigation title: "Away @ Home" when a game exists, otherwise the team name.
     private var navigationTitle: String {
         guard let secondaryName = secondaryTeamName else {
             return primaryTeamName
         }
-        switch source {
-        case .game:
-            // .game always treats away as primary
-            return "\(primaryTeamName) @ \(secondaryName)"
-        case .team(let id, _, let game):
-            guard let game else { return primaryTeamName }
-            let isHome = game.teams.home.team.id == id
-            return isHome
-                ? "\(primaryTeamName) vs \(secondaryName)"
-                : "\(primaryTeamName) @ \(secondaryName)"
-        }
+        return "\(primaryTeamName) @ \(secondaryName)"
     }
 
     // MARK: - Roster Grid
