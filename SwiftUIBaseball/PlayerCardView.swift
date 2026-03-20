@@ -36,6 +36,7 @@ struct PlayerCardView: View {
     var teamName: String?
 
     @Environment(\.modelContext) private var modelContext
+    @State private var isFavorited = false
     @State private var statcast: StatcastBatting?
     @State private var statcastPitching: StatcastPitching?
     @State private var isLoadingStatcast = false
@@ -98,30 +99,31 @@ struct PlayerCardView: View {
             .navigationTitle(entry.person.fullName)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        isFavorited = FavoriteItem.toggle(
+                            kind: .player,
+                            entityId: entry.id,
+                            name: entry.person.fullName,
+                            teamName: teamName,
+                            position: entry.position.displayName,
+                            positionCode: entry.position.rawValue,
+                            jerseyNumber: entry.jerseyNumber,
+                            in: modelContext
+                        )
+                    } label: {
+                        Image(systemName: isFavorited ? "star.fill" : "star")
+                            .foregroundStyle(isFavorited ? .yellow : .secondary)
+                    }
+                    .accessibilityLabel(isFavorited ? "Unfavorite" : "Favorite")
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
                 }
             }
             .task { await loadStatcast() }
-        }
-        .contextMenu {
-            let isFav = FavoriteItem.isFavorited(entityId: entry.id, in: modelContext)
-            Button {
-                FavoriteItem.toggle(
-                    kind: .player,
-                    entityId: entry.id,
-                    name: entry.person.fullName,
-                    teamName: teamName,
-                    position: entry.position.displayName,
-                    positionCode: entry.position.rawValue,
-                    jerseyNumber: entry.jerseyNumber,
-                    in: modelContext
-                )
-            } label: {
-                Label(
-                    isFav ? "Unfavorite" : "Favorite",
-                    systemImage: isFav ? "star.slash" : "star"
-                )
+            .onAppear {
+                isFavorited = FavoriteItem.isFavorited(entityId: entry.id, in: modelContext)
             }
         }
     }
