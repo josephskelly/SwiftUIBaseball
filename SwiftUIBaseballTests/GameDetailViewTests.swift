@@ -38,15 +38,22 @@ struct RosterSourceCacheKeyTests {
         #expect(source.cacheKey == 745123)
     }
 
-    @Test func teamWithGameUsesGamePk() {
+    @Test func teamWithGameUsesTeamId() {
         let entry = Self.makeEntry(gamePk: 745456)
         let source = RosterSource.team(id: 119, name: "Dodgers", game: entry)
-        #expect(source.cacheKey == 745456)
+        #expect(source.cacheKey == 119)
     }
 
-    @Test func teamWithoutGameFallsBackToTeamId() {
+    @Test func teamWithoutGameUsesTeamId() {
         let source = RosterSource.team(id: 119, name: "Dodgers", game: nil)
         #expect(source.cacheKey == 119)
+    }
+
+    @Test func opposingTeamsSamGameGetDifferentCacheKeys() {
+        let entry = Self.makeEntry(gamePk: 745456)
+        let away = RosterSource.team(id: 119, name: "Dodgers", game: entry)
+        let home = RosterSource.team(id: 116, name: "Tigers", game: entry)
+        #expect(away.cacheKey != home.cacheKey)
     }
 }
 

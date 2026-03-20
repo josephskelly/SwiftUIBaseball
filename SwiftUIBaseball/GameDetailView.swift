@@ -21,13 +21,16 @@ enum RosterSource {
     /// Single-team entry from the teams list, with an optional game for the opponent tab.
     case team(id: Int, name: String, game: ScheduleEntry?)
 
-    /// Stable cache key: gamePk when available, otherwise teamId.
+    /// Stable cache key for the L1 stats cache.
     ///
-    /// These ID spaces don't collide — gamePk is ~700 000+ while teamIds are 100–160.
+    /// `.game` uses gamePk; `.team` always uses teamId so that two teams in the
+    /// same game get separate cache entries (their primary/secondary rosters are
+    /// swapped). These ID spaces don't collide — gamePk is ~700 000+ while
+    /// teamIds are 100–160.
     var cacheKey: Int {
         switch self {
         case .game(let entry): entry.id
-        case .team(let id, _, let game): game?.id ?? id
+        case .team(let id, _, _): id
         }
     }
 }
@@ -201,11 +204,22 @@ struct GameDetailView: View {
         #endif
     }
 
+    /// Navigation title showing the matchup with correct home/away prefix.
     private var navigationTitle: String {
-        if let secondaryName = secondaryTeamName {
-            return "\(primaryTeamName) @ \(secondaryName)"
+        guard let secondaryName = secondaryTeamName else {
+            return primaryTeamName
         }
-        return primaryTeamName
+        switch source {
+        case .game:
+            // .game always treats away as primary
+            return "\(primaryTeamName) @ \(secondaryName)"
+        case .team(let id, _, let game):
+            guard let game else { return primaryTeamName }
+            let isHome = game.teams.home.team.id == id
+            return isHome
+                ? "\(primaryTeamName) vs \(secondaryName)"
+                : "\(primaryTeamName) @ \(secondaryName)"
+        }
     }
 
     // MARK: - Roster Grid

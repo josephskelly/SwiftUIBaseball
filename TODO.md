@@ -6,7 +6,7 @@
 
 [ ] Spray chart / batted ball visualization — Plot a player's batted balls on a field diagram using Statcast hit coordinates (the CSV data already includes hc_x and hc_y fields). Color-code by outcome (hit, out, HR). Demonstrates custom drawing with Canvas or Shape, data visualization skills, and creative use of an existing data source.
 
-[ ] Fix bug where both teams show @ the other team. and you can click on a team but get their opponents roster. This happened with the giants and Rockies on THursday, Mar 19, 2026.
+[X] Fix bug where both teams show @ the other team. and you can click on a team but get their opponents roster. This happened with the giants and Rockies on THursday, Mar 19, 2026. Fixed: .team sources now always use teamId as cache key (not gamePk) so opposing teams get separate cache entries; navigation title uses "vs" for home teams and "@" for away teams.
 
 [ ] Confirm that the bug where user cannot interact or scroll for the first 20 seconds on a fresh Run was determined to be overhead from debugger. 
 
