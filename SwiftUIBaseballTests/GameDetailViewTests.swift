@@ -3,6 +3,7 @@
 //  SwiftUIBaseballTests
 //
 
+import Foundation
 import Testing
 import SwiftBaseball
 @testable import SwiftUIBaseball
@@ -224,6 +225,42 @@ struct FormatIPTests {
 
     @Test func zero() {
         #expect(formatIP(0.0) == "0.0")
+    }
+}
+
+// MARK: - GameStatus.displayText
+
+struct GameStatusDisplayTextTests {
+
+    @Test func scheduledShowsTime() {
+        // 2025-04-01 at 23:05 UTC
+        let date = Date(timeIntervalSince1970: 1_743_548_700)
+        let text = GameStatus.scheduled.displayText(gameDate: date)
+        // Should contain a colon-separated time (e.g. "7:05 PM", "23:05"),
+        // never the raw "Scheduled" string.
+        #expect(text.contains(":"))
+        #expect(text != "Scheduled")
+    }
+
+    @Test func finalIgnoresDate() {
+        let date = Date()
+        #expect(GameStatus.final.displayText(gameDate: date) == "Final")
+    }
+
+    @Test func gameOverIgnoresDate() {
+        let date = Date()
+        #expect(GameStatus.gameOver.displayText(gameDate: date) == "Final")
+    }
+
+    @Test func completedEarlyIgnoresDate() {
+        let date = Date()
+        #expect(GameStatus.completedEarly.displayText(gameDate: date) == "Final")
+    }
+
+    @Test func inProgressShowsRawValue() {
+        let date = Date()
+        let text = GameStatus.inProgress.displayText(gameDate: date)
+        #expect(text == GameStatus.inProgress.rawValue)
     }
 }
 

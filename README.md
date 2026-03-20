@@ -7,7 +7,7 @@ A demo SwiftUI app showcasing the [SwiftBaseball](https://github.com/josephskell
 - **Instant-loading home screen**: 30 MLB teams hardcoded as seed data and cached locally via SwiftData — the teams list renders immediately on fresh installs with no network wait. Background API refresh triggers only when data is older than 24 hours
 - **Two-tier stats cache**: L1 in-memory actor cache for instant same-session access; L2 SwiftData persistence for player bio, season stats, and platoon splits that survive app restarts with a 24-hour TTL
 - **Favorite player cards load instantly** for previously viewed players — bio, stats, and platoon splits are served from the persistent cache without network calls
-- Teams list with today's game status shown inline when a team is playing
+- Teams list with today's game status shown inline — scheduled games display the start time in the device's local time zone (e.g. "7:05 PM") instead of a generic "Scheduled" label
 - Tap any team to view its roster; if playing today, opponent roster available as a tab
 - Per-player OPS stats (batting or pitching) matching the game type (spring training stats for spring training games, regular season for regular season, etc.)
 - Sortable roster columns using a `Grid` layout: tap any column header (Name, OPS, vL, vR, Handedness) to sort ascending/descending with a chevron indicator

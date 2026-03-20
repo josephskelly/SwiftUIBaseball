@@ -207,12 +207,12 @@ struct ContentView: View {
         }
     }
 
-    /// Builds a short game description, e.g. "vs Red Sox · Scheduled".
+    /// Builds a short game description, e.g. "vs Red Sox · 7:05 PM".
     private func gameDescription(teamId: Int, game: ScheduleEntry) -> String {
         let isHome = game.teams.home.team.id == teamId
         let opponent = isHome ? game.teams.away.team.name : game.teams.home.team.name
         let prefix = isHome ? "vs" : "@"
-        return "\(prefix) \(opponent) · \(game.status.displayText)"
+        return "\(prefix) \(opponent) · \(game.status.displayText(gameDate: game.gameDate))"
     }
 
     // MARK: - Data Loading
@@ -275,11 +275,16 @@ struct ContentView: View {
     }
 }
 
-private extension GameStatus {
+extension GameStatus {
     /// Display label for use in the UI.
-    var displayText: String {
+    ///
+    /// Scheduled games show the start time in the device's local time zone
+    /// (e.g. "7:05 PM") instead of the raw "Scheduled" status.
+    func displayText(gameDate: Date) -> String {
         switch self {
         case .final, .completedEarly, .gameOver: "Final"
+        case .scheduled:
+            gameDate.formatted(.dateTime.hour().minute())
         default: rawValue
         }
     }

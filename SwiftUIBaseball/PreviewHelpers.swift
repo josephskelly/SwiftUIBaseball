@@ -33,12 +33,15 @@ private let previewDecoder: JSONDecoder = {
 
 extension ScheduleEntry {
     /// A mock Yankees @ Red Sox scheduled game for use in previews.
+    ///
+    /// The `gameDate` includes a time component (23:05 UTC → 7:05 PM ET)
+    /// so previews show a realistic start time rather than midnight.
     static let preview: ScheduleEntry = {
         // swiftlint:disable:next force_try
         try! previewDecoder.decode(ScheduleEntry.self, from: Data("""
         {
             "gamePk": 1,
-            "gameDate": "2025-04-01",
+            "gameDate": "2025-04-01T23:05:00Z",
             "status": "Scheduled",
             "teams": {
                 "away": {"team": {"id": 147, "name": "New York Yankees"}},
