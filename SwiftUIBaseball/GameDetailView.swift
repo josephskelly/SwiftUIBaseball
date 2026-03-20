@@ -583,16 +583,31 @@ struct GameDetailView: View {
         let chunkSize = 6
 
         // Partition into cached (from SwiftData L2) and uncached entries.
+        // Entries with a cache hit but missing platoon data are queued for
+        // a platoon-only backfill so transient failures don't stick for 24 h.
         var entriesToFetch: [RosterEntry] = []
+        var platoonBackfill: [RosterEntry] = []
         for entry in entries {
             if let cached = await StatsCache.shared.cachedPlayer(id: entry.id, season: season) {
                 if let p = cached.player { players[entry.id] = p }
                 if let s = cached.stats { playerStats[entry.id] = s }
                 if let bp = cached.batterPlatoon { batterPlatoon[entry.id] = bp }
                 if let pp = cached.pitcherPlatoon { pitcherPlatoon[entry.id] = pp }
+
+                // Queue for platoon backfill if the cache is missing splits.
+                let isPitcher = entry.position == .pitcher
+                let hasPlatoon = isPitcher ? cached.pitcherPlatoon != nil : cached.batterPlatoon != nil
+                if !hasPlatoon {
+                    platoonBackfill.append(entry)
+                }
             } else {
                 entriesToFetch.append(entry)
             }
+        }
+
+        // Backfill missing platoon splits for cached players.
+        if !platoonBackfill.isEmpty {
+            await backfillPlatoonStats(entries: platoonBackfill, season: season, gameType: gt)
         }
 
         guard !entriesToFetch.isEmpty else { return [] }
@@ -672,6 +687,60 @@ struct GameDetailView: View {
         }
 
         return failedIds
+    }
+
+    /// Re-fetches only platoon splits for players whose L2 cache entry was
+    /// missing that data (e.g. from a prior transient API failure).
+    private func backfillPlatoonStats(
+        entries: [RosterEntry],
+        season: Int,
+        gameType gt: GameType
+    ) async {
+        await withTaskGroup(of: (Int, PlayerPlatoonStats?, PitcherPlatoonStats?).self) { group in
+            for entry in entries {
+                let isPitcher = entry.position == .pitcher
+                group.addTask {
+                    var bPlatoon: PlayerPlatoonStats?
+                    var pPlatoon: PitcherPlatoonStats?
+                    if isPitcher {
+                        if let result = await withRetry({
+                            try await SwiftBaseball
+                                .pitcherPlatoonStats(id: entry.id)
+                                .season(season)
+                                .gameType(gt)
+                                .fetch()
+                        }),
+                           result.vsLeft?.ops != nil || result.vsRight?.ops != nil {
+                            pPlatoon = result
+                        }
+                    } else {
+                        if let result = await withRetry({
+                            try await SwiftBaseball
+                                .playerPlatoonStats(id: entry.id)
+                                .season(season)
+                                .gameType(gt)
+                                .fetch()
+                        }),
+                           result.vsLeft?.ops != nil || result.vsRight?.ops != nil {
+                            bPlatoon = result
+                        }
+                    }
+                    return (entry.id, bPlatoon, pPlatoon)
+                }
+            }
+            for await (id, bPlatoon, pPlatoon) in group {
+                if let bPlatoon { batterPlatoon[id] = bPlatoon }
+                if let pPlatoon { pitcherPlatoon[id] = pPlatoon }
+
+                // Update L2 cache with the backfilled platoon data.
+                if bPlatoon != nil || pPlatoon != nil {
+                    await StatsCache.shared.persistPlayer(
+                        id: id, season: season,
+                        batterPlatoon: bPlatoon, pitcherPlatoon: pPlatoon
+                    )
+                }
+            }
+        }
     }
 
     // MARK: - Background Statcast Loading

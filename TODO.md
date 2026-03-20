@@ -64,8 +64,8 @@ Root causes for slow loading and intermittent missing stats.
 [ ] **Silent error swallowing everywhere** — `GameDetailView.swift:592,603,612,622` and `PlayerCardView.swift:191,194,204,213`
   Every API call uses `try?`, converting timeouts, rate limits, and transient errors to nil. Indistinguishable from "player has no stats." Fix: Distinguish transient errors from empty data; add at least one retry with backoff.
 
-[ ] **L1 cache written with incomplete data after partial failures** — `GameDetailView.swift:524-536`
-  L1 entry written after `loadPlayerStats`, which silently drops failed players. Cache now contains a "complete" entry that's actually missing data. Every subsequent visit returns incomplete cached data until app is killed. Fix: Track which players failed; don't cache the entry or mark it as partial so next visit re-fetches missing players.
+[/] **L1 cache written with incomplete data after partial failures** — `GameDetailView.swift:524-536`
+  L1 entry written after `loadPlayerStats`, which silently drops failed players. Cache now contains a "complete" entry that's actually missing data. Every subsequent visit returns incomplete cached data until app is killed. Fix: Track which players failed; don't cache the entry or mark it as partial so next visit re-fetches missing players. Partially fixed: L2 cache now backfills missing platoon splits on subsequent visits instead of serving incomplete data permanently.
 
 [ ] **PlayerCardView guard skips re-fetch when partially loaded** — `PlayerCardView.swift:169`
   `guard player == nil && stats == nil` — if player is pre-populated but stats is nil (failed fetch), the card skips stats fetch entirely. Fix: Check each field independently so the card fetches whatever is missing.
