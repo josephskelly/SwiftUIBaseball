@@ -12,7 +12,7 @@ A demo SwiftUI app showcasing the [SwiftBaseball](https://github.com/josephskell
 - Tap any team to view its roster; if playing today, opponent roster available as a tab
 - Per-player OPS stats (batting or pitching) matching the game type (spring training stats for spring training games, regular season for regular season, etc.)
 - Sortable roster columns using a `Grid` layout: tap any column header (Name, OPS, vL, vR, Handedness) to sort ascending/descending with a chevron indicator
-- GB% and FB% columns in the roster grid (landscape / wide layouts), loaded progressively from Baseball Savant in the background with player-card-open prioritization
+- GB% and FB% columns in the roster grid (landscape / wide layouts), loaded progressively from Baseball Savant in the background with selected-team and player-card-open prioritization
 - Statcast batted-ball data on batter cards: exit velocity, launch angle, barrel rate, hard-hit rate, batted-ball distribution, and expected stats (xBA, xSLG, xwOBA)
 - Statcast pitching data on pitcher cards: batted-ball-against metrics, pitch arsenal (fastball velocity, spin rate, whiff%, CSW%), and pitch-mix breakdown by pitch type
 - "No season stats available" fallback on player cards when the API returns no data (e.g. spring training rosters)

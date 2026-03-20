@@ -492,7 +492,8 @@ struct GameDetailView: View {
     // MARK: - Data Loading
 
     private func loadRosters() async {
-        // Warm path: return immediately from cache.
+        // Warm path: restore rosters/stats from L1 cache and kick off
+        // Statcast loading (L1 entries don't include Statcast data).
         if let cached = await StatsCache.shared.entry(for: source.cacheKey) {
             primaryRoster  = cached.awayRoster
             secondaryRoster = cached.homeRoster
@@ -500,6 +501,7 @@ struct GameDetailView: View {
             playerStats    = cached.playerStats
             batterPlatoon  = cached.batterPlatoon
             pitcherPlatoon = cached.pitcherPlatoon
+            startStatcastLoading()
             return
         }
 
@@ -755,7 +757,12 @@ struct GameDetailView: View {
     private func startStatcastLoading(prioritizeId: Int? = nil) {
         statcastTask?.cancel()
         let season = seasonYear
-        let allEntries = primaryRoster + secondaryRoster
+        let allEntries: [RosterEntry]
+        if selectedSide == 0 {
+            allEntries = primaryRoster + secondaryRoster
+        } else {
+            allEntries = secondaryRoster + primaryRoster
+        }
 
         statcastTask = Task {
             var ordered = allEntries

@@ -97,3 +97,5 @@ Root causes for slow loading and intermittent missing stats.
 
 [ ] **Task.detached in ContentView doesn't help** — `ContentView.swift:271-273`
   `loadScheduleInBackground` wraps in `Task.detached` but awaits `.value` on the main actor. The detached task doesn't improve responsiveness. Fix: Drop `Task.detached` since `.task` already runs off-main.
+  
+[x] Home team roster always loads statcast data last even when its selected.
