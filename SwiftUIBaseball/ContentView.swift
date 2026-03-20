@@ -204,8 +204,8 @@ struct ContentView: View {
         let homeId = game.teams.home.team.id
         let homeName = game.teams.home.team.name
 
-        let awayIsFav = FavoriteItem.isFavorited(entityId: awayId, in: modelContext)
-        let homeIsFav = FavoriteItem.isFavorited(entityId: homeId, in: modelContext)
+        let awayIsFav = favoriteTeamIds.contains(awayId)
+        let homeIsFav = favoriteTeamIds.contains(homeId)
 
         Button {
             FavoriteItem.toggle(kind: .team, entityId: awayId, name: awayName, in: modelContext)
