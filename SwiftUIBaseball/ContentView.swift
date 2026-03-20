@@ -21,7 +21,6 @@ struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
 
     @State private var games: [ScheduleEntry] = []
-    @State private var isLoadingTeams = false
     @State private var selectedFavoritePlayer: FavoriteItem?
 
     /// Favorite teams filtered from the single `@Query`.
@@ -57,19 +56,7 @@ struct ContentView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                if cachedTeams.isEmpty && isLoadingTeams {
-                    ProgressView("Loading teams…")
-                } else if cachedTeams.isEmpty {
-                    ContentUnavailableView(
-                        "No Teams",
-                        systemImage: "sportscourt",
-                        description: Text("Pull to refresh to load MLB teams.")
-                    )
-                } else {
-                    teamsList
-                }
-            }
+            teamsList
             .navigationTitle("Teams")
             .navigationDestination(for: TeamNavValue.self) { nav in
                 GameDetailView(teamId: nav.teamId, teamName: nav.teamName, game: gameForTeam(nav.teamId))
@@ -230,12 +217,15 @@ struct ContentView: View {
 
     // MARK: - Data Loading
 
-    /// Loads teams from SwiftData cache on first launch only.
+    /// Refreshes teams in the background if any cached team is older than 24 hours.
+    ///
+    /// The list always has data (seeded or cached), so this only triggers a
+    /// background API refresh when the cache is stale.
     private func loadTeamsIfNeeded() async {
-        guard cachedTeams.isEmpty else { return }
-        isLoadingTeams = true
+        let staleThreshold = Date().addingTimeInterval(-StatsCache.cacheTTL)
+        let hasStale = cachedTeams.contains { $0.updatedAt < staleThreshold }
+        guard hasStale else { return }
         await refreshTeams()
-        isLoadingTeams = false
     }
 
     /// Fetches all MLB teams from the API and upserts into SwiftData on a background context.
@@ -297,5 +287,5 @@ private extension GameStatus {
 
 #Preview {
     ContentView()
-        .modelContainer(for: [FavoriteItem.self, CachedTeam.self], inMemory: true)
+        .modelContainer(for: [FavoriteItem.self, CachedTeam.self, CachedPlayerData.self], inMemory: true)
 }

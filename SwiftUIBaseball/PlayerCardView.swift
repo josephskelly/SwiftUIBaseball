@@ -163,10 +163,23 @@ struct PlayerCardView: View {
 
     /// Fetches player bio, season stats, and platoon splits when not pre-populated.
     ///
-    /// This is the path used when the card is opened from favorites where no
-    /// pre-fetched MLB data is available.
+    /// Checks the SwiftData persistent cache first. Falls back to the network
+    /// for any missing or stale data.
     private func loadMLBData() async {
         guard player == nil && stats == nil else { return }
+
+        // Check SwiftData L2 cache before hitting the network.
+        if let cached = await StatsCache.shared.cachedPlayer(id: entry.id, season: season) {
+            if let p = cached.player { player = p }
+            if let s = cached.stats { stats = s }
+            if let bp = cached.batterPlatoon { batterPlatoon = bp }
+            if let pp = cached.pitcherPlatoon { pitcherPlatoon = pp }
+            // If we got at least player bio, we can skip the network call.
+            if player != nil && stats != nil {
+                return
+            }
+        }
+
         isLoadingMLBData = true
 
         let statGroup: StatGroup = isPitcher ? .pitching : .batting
@@ -209,6 +222,14 @@ struct PlayerCardView: View {
                 break
             }
         }
+
+        // Persist fetched data to SwiftData L2.
+        await StatsCache.shared.persistPlayer(
+            id: entry.id, season: season,
+            player: player, stats: stats,
+            batterPlatoon: batterPlatoon, pitcherPlatoon: pitcherPlatoon
+        )
+
         isLoadingMLBData = false
     }
 
@@ -222,6 +243,8 @@ struct PlayerCardView: View {
     }
 
     /// Fetches Statcast batted-ball data for position players.
+    ///
+    /// Checks preloaded data, L1 in-memory cache, L2 SwiftData cache, then network.
     private func loadStatcastBatting() async {
         if let preloadedStatcast {
             statcast = preloadedStatcast
@@ -243,6 +266,8 @@ struct PlayerCardView: View {
     }
 
     /// Fetches Statcast pitching data (batted ball against + pitch arsenal).
+    ///
+    /// Checks preloaded data, L1 in-memory cache, L2 SwiftData cache, then network.
     private func loadStatcastPitching() async {
         if let preloadedStatcastPitching {
             statcastPitching = preloadedStatcastPitching

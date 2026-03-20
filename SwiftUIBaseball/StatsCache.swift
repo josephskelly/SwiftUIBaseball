@@ -3,17 +3,25 @@
 //  SwiftUIBaseball
 //
 
+import Foundation
 import SwiftBaseball
+import SwiftData
 
-/// In-memory cache for roster and player stats keyed by game primary key.
+/// Two-tier cache for roster and player stats.
 ///
-/// Using a Swift `actor` provides data-race-free access from concurrent tasks.
-/// Cache entries persist for the lifetime of the app session; a pull-to-refresh
-/// in ``GameDetailView`` bypasses the cache to force a fresh fetch.
+/// L1 (in-memory dictionaries) provides instant access within the current session.
+/// L2 (SwiftData via ``CachedPlayerData``) persists across launches with a 24-hour TTL.
+/// Game-keyed ``Entry`` data stays in-memory only (it's a composite of per-player data).
 actor StatsCache {
 
     /// Shared singleton used throughout the app.
     static let shared = StatsCache()
+
+    /// Cache time-to-live: 24 hours.
+    static let cacheTTL: TimeInterval = 86_400
+
+    /// The SwiftData container for L2 persistence. Set from app init.
+    static var modelContainer: ModelContainer?
 
     /// All data needed to populate a ``GameDetailView`` without network calls.
     struct Entry: Sendable {
@@ -43,7 +51,7 @@ actor StatsCache {
         cache[gamePk] = entry
     }
 
-    // MARK: - Statcast Cache
+    // MARK: - Statcast Cache (L1)
 
     /// Statcast data keyed by `"playerId-season"`.
     private var statcastCache: [String: StatcastBatting] = [:]
@@ -62,7 +70,7 @@ actor StatsCache {
         statcastCache[Self.statcastKey(playerId: playerId, season: season)] = data
     }
 
-    // MARK: - Statcast Pitching Cache
+    // MARK: - Statcast Pitching Cache (L1)
 
     /// Statcast pitching data keyed by `"playerId-season"`.
     private var statcastPitchingCache: [String: StatcastPitching] = [:]
@@ -75,5 +83,94 @@ actor StatsCache {
     /// Stores Statcast pitching data for a player/season pair.
     func setStatcastPitching(_ data: StatcastPitching, playerId: Int, season: Int) {
         statcastPitchingCache[Self.statcastKey(playerId: playerId, season: season)] = data
+    }
+
+    // MARK: - SwiftData L2 Cache
+
+    /// Returns `true` if the given date is older than ``cacheTTL``.
+    private static func isStale(_ date: Date) -> Bool {
+        date.timeIntervalSinceNow < -cacheTTL
+    }
+
+    /// Loads cached player data from SwiftData if fresh.
+    ///
+    /// Returns a tuple of all available cached data for the player/season, or `nil`
+    /// for any field that isn't cached or is stale.
+    ///
+    /// - Parameters:
+    ///   - id: MLB player ID.
+    ///   - season: Season year.
+    /// - Returns: Tuple of decoded data, or `nil` if not cached or stale.
+    func cachedPlayer(id: Int, season: Int) -> (
+        player: Player?,
+        stats: PlayerSeasonStats?,
+        batterPlatoon: PlayerPlatoonStats?,
+        pitcherPlatoon: PitcherPlatoonStats?
+    )? {
+        guard let container = Self.modelContainer else { return nil }
+        let context = ModelContext(container)
+        let key = "\(id)-\(season)"
+        let descriptor = FetchDescriptor<CachedPlayerData>(
+            predicate: #Predicate { $0.cacheKey == key }
+        )
+        guard let cached = try? context.fetch(descriptor).first,
+              !Self.isStale(cached.updatedAt) else { return nil }
+
+        let decoder = JSONDecoder()
+        let player = cached.playerJSON.flatMap { try? decoder.decode(Player.self, from: $0) }
+        let stats = cached.seasonStatsJSON.flatMap { try? decoder.decode(PlayerSeasonStats.self, from: $0) }
+        let bPlatoon = cached.batterPlatoonJSON.flatMap {
+            (try? decoder.decode(CodablePlatoonStats.self, from: $0))?.toModel
+        }
+        let pPlatoon = cached.pitcherPlatoonJSON.flatMap {
+            (try? decoder.decode(CodablePitcherPlatoonStats.self, from: $0))?.toModel
+        }
+
+        return (player, stats, bPlatoon, pPlatoon)
+    }
+
+    /// Persists player data to SwiftData, upserting by player ID + season.
+    ///
+    /// Only persists types that support round-trip serialization (Player,
+    /// PlayerSeasonStats, platoon stats). Statcast data stays in L1 only.
+    ///
+    /// - Parameters:
+    ///   - id: MLB player ID.
+    ///   - season: Season year.
+    ///   - player: Player bio.
+    ///   - stats: Season stats.
+    ///   - batterPlatoon: Batter platoon splits.
+    ///   - pitcherPlatoon: Pitcher platoon splits.
+    func persistPlayer(
+        id: Int,
+        season: Int,
+        player: Player? = nil,
+        stats: PlayerSeasonStats? = nil,
+        batterPlatoon: PlayerPlatoonStats? = nil,
+        pitcherPlatoon: PitcherPlatoonStats? = nil
+    ) {
+        guard let container = Self.modelContainer else { return }
+        let context = ModelContext(container)
+        let key = "\(id)-\(season)"
+        let descriptor = FetchDescriptor<CachedPlayerData>(
+            predicate: #Predicate { $0.cacheKey == key }
+        )
+
+        let record: CachedPlayerData
+        if let existing = try? context.fetch(descriptor).first {
+            record = existing
+        } else {
+            record = CachedPlayerData(playerId: id, season: season)
+            context.insert(record)
+        }
+
+        let encoder = JSONEncoder()
+        if let player { record.playerJSON = try? encoder.encode(player) }
+        if let stats { record.seasonStatsJSON = try? encoder.encode(stats) }
+        if let batterPlatoon { record.batterPlatoonJSON = try? encoder.encode(CodablePlatoonStats(batterPlatoon)) }
+        if let pitcherPlatoon { record.pitcherPlatoonJSON = try? encoder.encode(CodablePitcherPlatoonStats(pitcherPlatoon)) }
+        record.updatedAt = Date()
+
+        try? context.save()
     }
 }

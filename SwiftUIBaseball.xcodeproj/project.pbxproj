@@ -154,7 +154,7 @@
 						CreatedOnToolsVersion = 26.3;
 						TestTargetID = D82A3A032F691FC600CC888A;
 					};
-					};
+				};
 			};
 			buildConfigurationList = D82A39FF2F691FC600CC888A /* Build configuration list for PBXProject "SwiftUIBaseball" */;
 			developmentRegion = en;

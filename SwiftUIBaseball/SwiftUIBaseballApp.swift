@@ -11,19 +11,12 @@ import SwiftBaseball
 
 @main
 struct SwiftUIBaseballApp: App {
-    /// Configure the SwiftBaseball client at launch.
-    ///
-    /// Enables the in-memory response cache (1-hour TTL) so that same-session
-    /// re-appears and roster re-fetches resolve instantly from cache rather than
-    /// hitting the network on every view appearance.
-    init() {
-        SwiftBaseball.configure(.init(cacheEnabled: true, cacheTTL: 3600))
-    }
-
-    var sharedModelContainer: ModelContainer = {
+    /// Shared SwiftData container for all models.
+    let sharedModelContainer: ModelContainer = {
         let schema = Schema([
             FavoriteItem.self,
             CachedTeam.self,
+            CachedPlayerData.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
@@ -33,6 +26,18 @@ struct SwiftUIBaseballApp: App {
             fatalError("Could not create ModelContainer: \(error)")
         }
     }()
+
+    /// Configure the SwiftBaseball client and seed teams at launch.
+    ///
+    /// Bumps the client cache TTL to 24 hours (matching ``StatsCache/cacheTTL``)
+    /// and seeds the 30 MLB teams into SwiftData on fresh installs so the home
+    /// screen renders instantly.
+    init() {
+        SwiftBaseball.configure(.init(cacheEnabled: true, cacheTTL: 86_400))
+        StatsCache.modelContainer = sharedModelContainer
+        let context = ModelContext(sharedModelContainer)
+        CachedTeam.seedIfNeeded(into: context)
+    }
 
     var body: some Scene {
         WindowGroup {

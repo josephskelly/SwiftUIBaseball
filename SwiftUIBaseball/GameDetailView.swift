@@ -528,8 +528,24 @@ struct GameDetailView: View {
     private func loadPlayerStats(for entries: [RosterEntry]) async {
         let season = seasonYear
         let gt = gameType
+
+        // Partition into cached (from SwiftData L2) and uncached entries.
+        var entriesToFetch: [RosterEntry] = []
+        for entry in entries {
+            if let cached = await StatsCache.shared.cachedPlayer(id: entry.id, season: season) {
+                if let p = cached.player { players[entry.id] = p }
+                if let s = cached.stats { playerStats[entry.id] = s }
+                if let bp = cached.batterPlatoon { batterPlatoon[entry.id] = bp }
+                if let pp = cached.pitcherPlatoon { pitcherPlatoon[entry.id] = pp }
+            } else {
+                entriesToFetch.append(entry)
+            }
+        }
+
+        guard !entriesToFetch.isEmpty else { return }
+
         await withTaskGroup(of: (Int, Player?, PlayerSeasonStats?, PlayerPlatoonStats?, PitcherPlatoonStats?).self) { group in
-            for entry in entries {
+            for entry in entriesToFetch {
                 let isPitcher = entry.position == .pitcher
                 group.addTask {
                     let statGroup: StatGroup = isPitcher ? .pitching : .batting
@@ -575,6 +591,13 @@ struct GameDetailView: View {
                 if let stats { playerStats[id] = stats }
                 if let bPlatoon { batterPlatoon[id] = bPlatoon }
                 if let pPlatoon { pitcherPlatoon[id] = pPlatoon }
+
+                // Persist to SwiftData L2
+                await StatsCache.shared.persistPlayer(
+                    id: id, season: season,
+                    player: player, stats: stats,
+                    batterPlatoon: bPlatoon, pitcherPlatoon: pPlatoon
+                )
             }
         }
     }

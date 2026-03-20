@@ -4,7 +4,9 @@ A demo SwiftUI app showcasing the [SwiftBaseball](https://github.com/josephskell
 
 ## Features
 
-- **Instant-loading home screen**: all 30 MLB teams cached locally via SwiftData, grouped by division — no network wait on launch. API refreshes (teams + schedule) run concurrently on background contexts so the UI never blocks
+- **Instant-loading home screen**: 30 MLB teams hardcoded as seed data and cached locally via SwiftData — the teams list renders immediately on fresh installs with no network wait. Background API refresh triggers only when data is older than 24 hours
+- **Two-tier stats cache**: L1 in-memory actor cache for instant same-session access; L2 SwiftData persistence for player bio, season stats, and platoon splits that survive app restarts with a 24-hour TTL
+- **Favorite player cards load instantly** for previously viewed players — bio, stats, and platoon splits are served from the persistent cache without network calls
 - Teams list with today's game status shown inline when a team is playing
 - Tap any team to view its roster; if playing today, opponent roster available as a tab
 - Per-player OPS stats (batting or pitching) matching the game type (spring training stats for spring training games, regular season for regular season, etc.)
@@ -15,7 +17,7 @@ A demo SwiftUI app showcasing the [SwiftBaseball](https://github.com/josephskell
 - "No season stats available" fallback on player cards when the API returns no data (e.g. spring training rosters)
 - Suffix-aware name formatting: "Fernando Tatis Jr." abbreviates to "F. Tatis Jr." (not "F. Jr."); long and accented names scale gracefully without wrapping
 - Handedness indicator (L / R / S) for batters and pitchers
-- In-memory stats cache: re-visiting a game detail is instant (no network round-trips)
+- Pull-to-refresh bypasses cache TTL to force fresh data from the network
 - **Favorites with SwiftData persistence**: long-press any team or player row to favorite; favorites surface at the top of the home screen with tappable player cards; star toggle on player cards; data persists across app launches
 
 ## Requirements
@@ -84,8 +86,10 @@ SwiftUIBaseball/
 │   ├── GameDetailView.swift       # Roster + player stats (single team or game)
 │   ├── PlayerCardView.swift       # Player detail modal (bio, stats, Statcast)
 │   ├── FavoriteItem.swift         # SwiftData model for persisted favorites
-│   ├── CachedTeam.swift           # SwiftData model for cached MLB teams
-│   ├── StatsCache.swift           # In-memory actor cache (keyed by gamePk)
+│   ├── CachedTeam.swift           # SwiftData model for cached MLB teams + 30-team seed
+│   ├── CachedPlayerData.swift     # SwiftData model for persistent player stats cache
+│   ├── CodableWrappers.swift      # Codable bridges for non-Codable SwiftBaseball types
+│   ├── StatsCache.swift           # Two-tier cache actor (L1 in-memory, L2 SwiftData)
 │   ├── Formatters.swift           # OPS formatting, name abbreviation & suffix-aware helpers
 │   └── PreviewHelpers.swift       # Mock data for SwiftUI previews
 ├── SwiftUIBaseballTests/          # Unit tests
