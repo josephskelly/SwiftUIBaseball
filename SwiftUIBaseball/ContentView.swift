@@ -66,12 +66,14 @@ struct ContentView: View {
             }
             .navigationTitle("Teams")
             .task {
-                await loadTeamsIfNeeded()
-                await loadScheduleInBackground()
+                async let teams: () = loadTeamsIfNeeded()
+                async let schedule: () = loadScheduleInBackground()
+                _ = await (teams, schedule)
             }
             .refreshable {
-                await refreshTeams()
-                await loadScheduleInBackground()
+                async let teams: () = refreshTeams()
+                async let schedule: () = loadScheduleInBackground()
+                _ = await (teams, schedule)
             }
             .sheet(item: $selectedFavoritePlayer) { favorite in
                 if let entry = favorite.asRosterEntry {
@@ -225,33 +227,39 @@ struct ContentView: View {
         isLoadingTeams = false
     }
 
-    /// Fetches all MLB teams from the API and upserts into SwiftData.
+    /// Fetches all MLB teams from the API and upserts into SwiftData on a background context.
     private func refreshTeams() async {
         let season = Calendar.current.component(.year, from: Date())
         guard let teams = try? await SwiftBaseball.teams(.all(season: season)).fetch() else { return }
 
-        for team in teams {
-            let descriptor = FetchDescriptor<CachedTeam>(
-                predicate: #Predicate { $0.teamId == team.id }
-            )
-            if let existing = try? modelContext.fetch(descriptor).first {
-                existing.name = team.name
-                existing.abbreviation = team.abbreviation
-                existing.divisionName = team.division.name
-                existing.leagueName = team.league.name
-                existing.venueName = team.venue.name
-                existing.updatedAt = Date()
-            } else {
-                modelContext.insert(CachedTeam(
-                    teamId: team.id,
-                    name: team.name,
-                    abbreviation: team.abbreviation,
-                    divisionName: team.division.name,
-                    leagueName: team.league.name,
-                    venueName: team.venue.name
-                ))
+        let container = modelContext.container
+        await Task.detached {
+            let bgContext = ModelContext(container)
+            for team in teams {
+                let id = team.id
+                let descriptor = FetchDescriptor<CachedTeam>(
+                    predicate: #Predicate { $0.teamId == id }
+                )
+                if let existing = try? bgContext.fetch(descriptor).first {
+                    existing.name = team.name
+                    existing.abbreviation = team.abbreviation
+                    existing.divisionName = team.division.name
+                    existing.leagueName = team.league.name
+                    existing.venueName = team.venue.name
+                    existing.updatedAt = Date()
+                } else {
+                    bgContext.insert(CachedTeam(
+                        teamId: team.id,
+                        name: team.name,
+                        abbreviation: team.abbreviation,
+                        divisionName: team.division.name,
+                        leagueName: team.league.name,
+                        venueName: team.venue.name
+                    ))
+                }
             }
-        }
+            try? bgContext.save()
+        }.value
     }
 
     /// Loads today's schedule in the background for game status display.

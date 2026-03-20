@@ -4,7 +4,7 @@ A demo SwiftUI app showcasing the [SwiftBaseball](https://github.com/josephskell
 
 ## Features
 
-- **Instant-loading home screen**: all 30 MLB teams cached locally via SwiftData, grouped by division — no network wait on launch
+- **Instant-loading home screen**: all 30 MLB teams cached locally via SwiftData, grouped by division — no network wait on launch. API refreshes (teams + schedule) run concurrently on background contexts so the UI never blocks
 - Teams list with today's game status shown inline when a team is playing
 - Tap any team to view its roster; if playing today, opponent roster available as a tab
 - Per-player OPS stats (batting or pitching) matching the game type (spring training stats for spring training games, regular season for regular season, etc.)
