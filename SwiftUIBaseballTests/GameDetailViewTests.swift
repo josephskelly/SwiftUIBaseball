@@ -70,6 +70,60 @@ struct AbbreviatedNameTests {
     @Test func emptyString() {
         #expect(abbreviatedName("") == "")
     }
+
+    @Test func juniorSuffix() {
+        #expect(abbreviatedName("Fernando Tatis Jr.") == "F. Tatis Jr.")
+    }
+
+    @Test func seniorSuffix() {
+        #expect(abbreviatedName("Ken Griffey Sr.") == "K. Griffey Sr.")
+    }
+
+    @Test func romanNumeralSuffix() {
+        #expect(abbreviatedName("Carl Edwards II") == "C. Edwards II")
+    }
+
+    @Test func romanNumeralIII() {
+        #expect(abbreviatedName("Sandy Alcantara III") == "S. Alcantara III")
+    }
+
+    @Test func accentedName() {
+        #expect(abbreviatedName("José Ramírez") == "J. Ramírez")
+    }
+
+    @Test func accentedWithSuffix() {
+        #expect(abbreviatedName("Wander Franco Jr.") == "W. Franco Jr.")
+    }
+
+    @Test func onlyFirstAndSuffix() {
+        // Edge case: "Name Jr." — suffix is stripped, only one core part remains
+        #expect(abbreviatedName("Prince Jr.") == "Prince Jr.")
+    }
+}
+
+// MARK: - familyName
+
+struct FamilyNameTests {
+
+    @Test func simpleName() {
+        #expect(familyName("Aaron Judge") == "Judge")
+    }
+
+    @Test func withSuffix() {
+        #expect(familyName("Fernando Tatis Jr.") == "Tatis")
+    }
+
+    @Test func multiPartName() {
+        #expect(familyName("José de la Cruz") == "Cruz")
+    }
+
+    @Test func singleWord() {
+        #expect(familyName("Ohtani") == "Ohtani")
+    }
+
+    @Test func romanNumeral() {
+        #expect(familyName("Carl Edwards II") == "Edwards")
+    }
 }
 
 // MARK: - formatRate

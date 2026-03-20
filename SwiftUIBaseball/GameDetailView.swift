@@ -281,6 +281,8 @@ struct GameDetailView: View {
                     .foregroundStyle(.secondary)
 
                 Text(abbreviatedName(entry.person.fullName))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 if isWide {
@@ -449,9 +451,9 @@ struct GameDetailView: View {
         .frame(maxWidth: 80)
     }
 
-    /// Returns the last whitespace-delimited word of a player's full name.
+    /// Returns the family name of a player, ignoring generational suffixes.
     private func lastName(_ entry: RosterEntry) -> String {
-        entry.person.fullName.split(separator: " ").last.map(String.init) ?? entry.person.fullName
+        familyName(entry.person.fullName)
     }
 
     private func handednessLabel(entry: RosterEntry, isPitcher: Bool) -> String {
@@ -705,10 +707,8 @@ func sortRoster(
         let result: ComparisonResult
         switch field {
         case .name:
-            let lastA = a.person.fullName.split(separator: " ").last.map(String.init)
-                ?? a.person.fullName
-            let lastB = b.person.fullName.split(separator: " ").last.map(String.init)
-                ?? b.person.fullName
+            let lastA = familyName(a.person.fullName)
+            let lastB = familyName(b.person.fullName)
             result = lastA.localizedCaseInsensitiveCompare(lastB)
         case .hand:
             let handA = handLabel(a, isPitcher: isPitcher, players: players)

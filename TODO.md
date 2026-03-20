@@ -13,3 +13,7 @@
 [ ] App crashed when i tried to go back from the Dodgers roster.
 
 [ ] The very first initial load after a fresh install shows "No Teams" for a second before saying "Loading Teams." and then locking up for a bit. I'd like to show a list of all 30 teams immediately upon load after a fresh install.
+
+[ ] Favorite Players lettering is blue instead of white. Favorite players don’t have MLB stats api data like Bio and season stats.
+
+[ ] Spring Training sometimes has split squads where a team plays two games on the same day against different opponents. Home page UI does not handle this at all. There could also be doubleheaders and they could even be against different opponents in the regular season.

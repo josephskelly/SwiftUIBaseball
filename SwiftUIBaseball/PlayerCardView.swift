@@ -189,6 +189,8 @@ struct PlayerCardView: View {
             Text(entry.person.fullName)
                 .font(.title2)
                 .bold()
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
 
             HStack(spacing: 6) {
                 if let jersey = entry.jerseyNumber {

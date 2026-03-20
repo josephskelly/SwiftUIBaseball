@@ -68,13 +68,40 @@ func formatSpinRate(_ value: Double?) -> String {
     return String(format: "%.0f", value)
 }
 
-/// Abbreviate a player's full name to "F. Last".
+/// Name suffixes that should not be treated as a last name.
+private let nameSuffixes: Set<String> = ["Jr.", "Sr.", "II", "III", "IV", "V"]
+
+/// Split a full name into (core parts, suffix) where suffix is a trailing
+/// generational token like "Jr." or "III", if present.
 ///
-/// Single-word names are returned unchanged.
-func abbreviatedName(_ fullName: String) -> String {
+/// - Parameter fullName: A player's full display name.
+/// - Returns: A tuple of the name parts without the suffix and the suffix string (empty if none).
+func splitNameSuffix(_ fullName: String) -> (core: [Substring], suffix: String) {
     let parts = fullName.split(separator: " ")
-    guard let first = parts.first, let last = parts.last, parts.count > 1 else {
+    if let last = parts.last, nameSuffixes.contains(String(last)) {
+        return (Array(parts.dropLast()), String(last))
+    }
+    return (parts, "")
+}
+
+/// Extract the family name from a full name, ignoring generational suffixes.
+///
+/// Returns the last word that is not a suffix (e.g. "Jr.", "III").
+/// Falls back to the full string when parsing fails.
+func familyName(_ fullName: String) -> String {
+    let (core, _) = splitNameSuffix(fullName)
+    return core.last.map(String.init) ?? fullName
+}
+
+/// Abbreviate a player's full name to "F. Last" (or "F. Last Jr." when a suffix is present).
+///
+/// Handles generational suffixes so that "Fernando Tatis Jr." becomes "F. Tatis Jr."
+/// rather than "F. Jr.". Single-word names are returned unchanged.
+func abbreviatedName(_ fullName: String) -> String {
+    let (core, suffix) = splitNameSuffix(fullName)
+    guard let first = core.first, let last = core.last, core.count > 1 else {
         return fullName
     }
-    return "\(first.prefix(1)). \(last)"
+    let base = "\(first.prefix(1)). \(last)"
+    return suffix.isEmpty ? base : "\(base) \(suffix)"
 }

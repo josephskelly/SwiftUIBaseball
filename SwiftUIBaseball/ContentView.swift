@@ -177,6 +177,8 @@ struct ContentView: View {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(player.name)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
                     HStack(spacing: 4) {
                         if let pos = player.position {
                             Text(pos)

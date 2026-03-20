@@ -13,6 +13,7 @@ A demo SwiftUI app showcasing the [SwiftBaseball](https://github.com/josephskell
 - Statcast batted-ball data on batter cards: exit velocity, launch angle, barrel rate, hard-hit rate, batted-ball distribution, and expected stats (xBA, xSLG, xwOBA)
 - Statcast pitching data on pitcher cards: batted-ball-against metrics, pitch arsenal (fastball velocity, spin rate, whiff%, CSW%), and pitch-mix breakdown by pitch type
 - "No season stats available" fallback on player cards when the API returns no data (e.g. spring training rosters)
+- Suffix-aware name formatting: "Fernando Tatis Jr." abbreviates to "F. Tatis Jr." (not "F. Jr."); long and accented names scale gracefully without wrapping
 - Handedness indicator (L / R / S) for batters and pitchers
 - In-memory stats cache: re-visiting a game detail is instant (no network round-trips)
 - **Favorites with SwiftData persistence**: long-press any team or player row to favorite; favorites surface at the top of the home screen with tappable player cards; star toggle on player cards; data persists across app launches
@@ -85,7 +86,7 @@ SwiftUIBaseball/
 │   ├── FavoriteItem.swift         # SwiftData model for persisted favorites
 │   ├── CachedTeam.swift           # SwiftData model for cached MLB teams
 │   ├── StatsCache.swift           # In-memory actor cache (keyed by gamePk)
-│   ├── Formatters.swift           # OPS formatting, name abbreviation helpers
+│   ├── Formatters.swift           # OPS formatting, name abbreviation & suffix-aware helpers
 │   └── PreviewHelpers.swift       # Mock data for SwiftUI previews
 ├── SwiftUIBaseballTests/          # Unit tests
 └── SwiftUIBaseballUITests/        # UI tests
