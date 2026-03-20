@@ -9,6 +9,12 @@ import SwiftUI
 import SwiftData
 import SwiftBaseball
 
+/// Lightweight navigation value — destinations created lazily via `.navigationDestination`.
+private struct TeamNavValue: Hashable {
+    let teamId: Int
+    let teamName: String
+}
+
 struct ContentView: View {
     @Query(sort: \FavoriteItem.name) private var allFavorites: [FavoriteItem]
     @Query(sort: \CachedTeam.name) private var cachedTeams: [CachedTeam]
@@ -65,6 +71,9 @@ struct ContentView: View {
                 }
             }
             .navigationTitle("Teams")
+            .navigationDestination(for: TeamNavValue.self) { nav in
+                GameDetailView(teamId: nav.teamId, teamName: nav.teamName, game: gameForTeam(nav.teamId))
+            }
             .task { await loadTeamsIfNeeded() }
             .task { await loadScheduleInBackground() }
             .refreshable {
@@ -128,7 +137,7 @@ struct ContentView: View {
         let matchingGame = gameForTeam(teamId)
         let isFav = favoriteTeamIds.contains(teamId)
 
-        return NavigationLink(destination: GameDetailView(teamId: teamId, teamName: name, game: matchingGame)) {
+        return NavigationLink(value: TeamNavValue(teamId: teamId, teamName: name)) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 6) {
