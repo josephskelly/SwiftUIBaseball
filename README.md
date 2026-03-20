@@ -1,6 +1,6 @@
 # SwiftUIBaseball
 
-A SwiftUI app that displays live MLB schedule data and roster information using the [MLB Stats API](https://statsapi.mlb.com).
+A demo SwiftUI app showcasing the [SwiftBaseball](https://github.com/josephskelly/SwiftBaseball.git) Swift package. Displays live MLB schedule data, rosters, player stats, and Statcast metrics — all powered by SwiftBaseball's type-safe API wrappers around the public MLB Stats API and Baseball Savant.
 
 ## Features
 
