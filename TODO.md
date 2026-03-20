@@ -14,7 +14,7 @@
 
 [ ] App crashed when i tried to go back from the Dodgers roster.
 
-[ ] The very first initial load after a fresh install shows "No Teams" for a second before saying "Loading Teams." and then locking up for a bit. I'd like to show a list of all 30 teams immediately upon load after a fresh install.
+[X] The very first initial load after a fresh install shows "No Teams" for a second before saying "Loading Teams." and then locking up for a bit. I'd like to show a list of all 30 teams immediately upon load after a fresh install. Fixed with two-tier persistent cache and hardcoded team seeds.
 
 [X] Favorite Players lettering is blue instead of white. Fixed with .buttonStyle(.plain). 
 
@@ -29,3 +29,20 @@
 [X] Tapping on a Favorite player button empty space does nothing. Fixed with .contentShape(Rectangle()) on the HStack.
 
 [ ] In general, there's too much fetching going on. Can we stream data or should we just cache everything?
+
+[ ] macos app has no icon.
+
+[ ] macos app just says "No Teams. Pull to refresh..." Can't pull.
+
+[ ] Two Way Player is only listed as a batter with only batting stats.
+
+[X] Show game start time instead of "Scheduled" on home screen. Done.
+
+[ ] Game detail should also show location and broadcast info. The "Final" and "In Progress" statuses still give the impression this data updates in real time when it doesn't.
+
+[ ] Design note: Statcast data (StatcastBatting/StatcastPitching) stays L1-only because those types have internal-only memberwise initializers and can't be
+  reconstructed from outside the SwiftBaseball module. The L2 cache handles the highest-impact types: player bio, season stats, and platoon splits. Deeper Exploration needed.
+
+[ ] Need a way to refresh the GameDetailView
+
+[X] L2 cache poisoning: cancelled or failed API fetches created empty SwiftData records that masked as cache hits for 24 hours, preventing re-fetch of player bios and platoon splits. Fixed with guards in persistPlayer and cachedPlayer.

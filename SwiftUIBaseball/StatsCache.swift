@@ -126,6 +126,9 @@ actor StatsCache {
             (try? decoder.decode(CodablePitcherPlatoonStats.self, from: $0))?.toModel
         }
 
+        // Treat all-nil decoded fields as a cache miss so the entry gets re-fetched.
+        guard player != nil || stats != nil || bPlatoon != nil || pPlatoon != nil else { return nil }
+
         return (player, stats, bPlatoon, pPlatoon)
     }
 
@@ -149,6 +152,8 @@ actor StatsCache {
         batterPlatoon: PlayerPlatoonStats? = nil,
         pitcherPlatoon: PitcherPlatoonStats? = nil
     ) {
+        // Don't create empty records — they poison the cache for 24 hours.
+        guard player != nil || stats != nil || batterPlatoon != nil || pitcherPlatoon != nil else { return }
         guard let container = Self.modelContainer else { return }
         let context = ModelContext(container)
         let key = "\(id)-\(season)"

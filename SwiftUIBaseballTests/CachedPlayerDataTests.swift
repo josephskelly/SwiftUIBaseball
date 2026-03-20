@@ -233,4 +233,41 @@ struct CachedTeamSeedTests {
         let result = await cache.cachedPlayer(id: 592450, season: 2024)
         #expect(result == nil)
     }
+
+    @Test func persistSkipsAllNilFields() async throws {
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try ModelContainer(
+            for: CachedPlayerData.self,
+            configurations: config
+        )
+        StatsCache.modelContainer = container
+
+        let cache = StatsCache()
+
+        // Persist with all nil data (simulates cancelled fetch).
+        await cache.persistPlayer(id: 111111, season: 2024)
+
+        // No record should exist — the guard should have returned early.
+        let result = await cache.cachedPlayer(id: 111111, season: 2024)
+        #expect(result == nil)
+    }
+
+    @Test func cachedPlayerReturnsNilForEmptyRecord() async throws {
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try ModelContainer(
+            for: CachedPlayerData.self,
+            configurations: config
+        )
+        StatsCache.modelContainer = container
+
+        // Manually insert an empty record (simulates a record with corrupt JSON).
+        let context = ModelContext(container)
+        let record = CachedPlayerData(playerId: 222222, season: 2024)
+        context.insert(record)
+        try context.save()
+
+        let cache = StatsCache()
+        let result = await cache.cachedPlayer(id: 222222, season: 2024)
+        #expect(result == nil)
+    }
 }
