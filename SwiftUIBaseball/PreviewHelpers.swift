@@ -305,4 +305,28 @@ extension FavoriteItem {
         jerseyNumber: "99"
     )
 }
+
+// MARK: - CachedTeam mocks
+
+extension CachedTeam {
+    /// A mock cached team (New York Yankees).
+    static let previewYankees = CachedTeam(
+        teamId: 147,
+        name: "New York Yankees",
+        abbreviation: "NYY",
+        divisionName: "American League East",
+        leagueName: "American League",
+        venueName: "Yankee Stadium"
+    )
+
+    /// A mock cached team (Boston Red Sox).
+    static let previewRedSox = CachedTeam(
+        teamId: 111,
+        name: "Boston Red Sox",
+        abbreviation: "BOS",
+        divisionName: "American League East",
+        leagueName: "American League",
+        venueName: "Fenway Park"
+    )
+}
 #endif

@@ -4,8 +4,9 @@ A demo SwiftUI app showcasing the [SwiftBaseball](https://github.com/josephskell
 
 ## Features
 
-- Today's MLB schedule with live scores and game status
-- Game detail view with away/home roster tabs
+- **Instant-loading home screen**: all 30 MLB teams cached locally via SwiftData, grouped by division — no network wait on launch
+- Teams list with today's game status shown inline when a team is playing
+- Tap any team to view its roster; if playing today, opponent roster available as a tab
 - Per-player OPS stats (batting or pitching) matching the game type (spring training stats for spring training games, regular season for regular season, etc.)
 - Sortable roster columns using a `Grid` layout: tap any column header (Name, OPS, vL, vR, Handedness) to sort ascending/descending with a chevron indicator
 - GB% and FB% columns in the roster grid (landscape / wide layouts), loaded progressively from Baseball Savant in the background with player-card-open prioritization
@@ -14,7 +15,7 @@ A demo SwiftUI app showcasing the [SwiftBaseball](https://github.com/josephskell
 - "No season stats available" fallback on player cards when the API returns no data (e.g. spring training rosters)
 - Handedness indicator (L / R / S) for batters and pitchers
 - In-memory stats cache: re-visiting a game detail is instant (no network round-trips)
-- **Favorites with SwiftData persistence**: long-press any game row to favorite teams or any player row to favorite players; favorites surface on the home screen with today's game status for teams and tappable player cards; data persists across app launches
+- **Favorites with SwiftData persistence**: long-press any team or player row to favorite; favorites surface at the top of the home screen with tappable player cards; star toggle on player cards; data persists across app launches
 
 ## Requirements
 
@@ -78,10 +79,11 @@ A free Apple ID allows sideloading to your own device for 7 days before re-signi
 SwiftUIBaseball/
 ├── SwiftUIBaseball/
 │   ├── SwiftUIBaseballApp.swift   # App entry point, SwiftData container setup
-│   ├── ContentView.swift          # Today's schedule list + favorites sections
-│   ├── GameDetailView.swift       # Roster + player stats per game
+│   ├── ContentView.swift          # Teams list + favorites home screen
+│   ├── GameDetailView.swift       # Roster + player stats (single team or game)
 │   ├── PlayerCardView.swift       # Player detail modal (bio, stats, Statcast)
 │   ├── FavoriteItem.swift         # SwiftData model for persisted favorites
+│   ├── CachedTeam.swift           # SwiftData model for cached MLB teams
 │   ├── StatsCache.swift           # In-memory actor cache (keyed by gamePk)
 │   ├── Formatters.swift           # OPS formatting, name abbreviation helpers
 │   └── PreviewHelpers.swift       # Mock data for SwiftUI previews

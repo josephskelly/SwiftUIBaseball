@@ -10,13 +10,13 @@ import SwiftData
 import SwiftBaseball
 
 struct ContentView: View {
-    @State private var games: [ScheduleEntry] = []
-    @State private var isLoading = true
-    @State private var errorMessage: String?
-    @State private var selectedFavoritePlayer: FavoriteItem?
-
     @Query(sort: \FavoriteItem.name) private var allFavorites: [FavoriteItem]
+    @Query(sort: \CachedTeam.name) private var cachedTeams: [CachedTeam]
     @Environment(\.modelContext) private var modelContext
+
+    @State private var games: [ScheduleEntry] = []
+    @State private var isLoadingTeams = false
+    @State private var selectedFavoritePlayer: FavoriteItem?
 
     /// Favorite teams filtered from the single `@Query`.
     private var favoriteTeams: [FavoriteItem] {
@@ -28,9 +28,19 @@ struct ContentView: View {
         allFavorites.filter { $0.kind == .player }
     }
 
-    /// Set of favorited team IDs for quick lookup in game rows.
+    /// Set of favorited team IDs for quick lookup.
     private var favoriteTeamIds: Set<Int> {
         Set(favoriteTeams.map(\.entityId))
+    }
+
+    /// Teams grouped by division in canonical order.
+    private var teamsByDivision: [(division: String, teams: [CachedTeam])] {
+        let grouped = Dictionary(grouping: cachedTeams, by: \.divisionName)
+        return CachedTeam.divisionOrder.compactMap { division in
+            guard let teams = grouped[division], !teams.isEmpty else { return nil }
+            let shortName = teams.first?.divisionShortName ?? division
+            return (shortName, teams.sorted { $0.name < $1.name })
+        }
     }
 
     private var todayString: String {
@@ -42,30 +52,26 @@ struct ContentView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if isLoading {
-                    ProgressView("Loading schedule…")
-                } else if let errorMessage {
+                if cachedTeams.isEmpty && isLoadingTeams {
+                    ProgressView("Loading teams…")
+                } else if cachedTeams.isEmpty {
                     ContentUnavailableView(
-                        "Unable to Load",
-                        systemImage: "exclamationmark.triangle",
-                        description: Text(errorMessage)
-                    )
-                } else if games.isEmpty && allFavorites.isEmpty {
-                    ContentUnavailableView(
-                        "No Games Today",
-                        systemImage: "calendar.badge.exclamationmark",
-                        description: Text("There are no MLB games scheduled for today.")
+                        "No Teams",
+                        systemImage: "sportscourt",
+                        description: Text("Pull to refresh to load MLB teams.")
                     )
                 } else {
-                    scheduleList
+                    teamsList
                 }
             }
-            .navigationTitle("Today's Games")
+            .navigationTitle("Teams")
             .task {
-                await loadSchedule()
+                await loadTeamsIfNeeded()
+                await loadScheduleInBackground()
             }
             .refreshable {
-                await loadSchedule()
+                await refreshTeams()
+                await loadScheduleInBackground()
             }
             .sheet(item: $selectedFavoritePlayer) { favorite in
                 if let entry = favorite.asRosterEntry {
@@ -85,15 +91,15 @@ struct ContentView: View {
         }
     }
 
-    // MARK: - Schedule List
+    // MARK: - Teams List
 
-    /// The main list with optional Favorites sections above Today's Games.
-    private var scheduleList: some View {
+    /// The main list with favorites sections and all teams grouped by division.
+    private var teamsList: some View {
         List {
             if !favoriteTeams.isEmpty {
-                Section("Favorite Teams") {
+                Section("Favorites") {
                     ForEach(favoriteTeams) { team in
-                        favoriteTeamRow(team)
+                        teamRow(teamId: team.entityId, name: team.name, isFavoriteSection: true)
                     }
                 }
             }
@@ -106,49 +112,51 @@ struct ContentView: View {
                 }
             }
 
-            Section("Today's Games") {
-                ForEach(games) { game in
-                    NavigationLink(destination: GameDetailView(game: game)) {
-                        GameRow(game: game, favoriteTeamIds: favoriteTeamIds)
-                    }
-                    .contextMenu {
-                        teamContextMenuButtons(for: game)
+            ForEach(teamsByDivision, id: \.division) { division, teams in
+                Section(division) {
+                    ForEach(teams, id: \.teamId) { team in
+                        teamRow(teamId: team.teamId, name: team.name, isFavoriteSection: false)
                     }
                 }
             }
         }
     }
 
-    // MARK: - Favorite Rows
+    // MARK: - Row Builders
 
-    /// A row for a favorited team, linking to its game if playing today.
-    @ViewBuilder
-    private func favoriteTeamRow(_ team: FavoriteItem) -> some View {
-        let matchingGame = games.first {
-            $0.teams.away.team.id == team.entityId ||
-            $0.teams.home.team.id == team.entityId
-        }
-        if let game = matchingGame {
-            NavigationLink(destination: GameDetailView(game: game)) {
+    /// A row for a team, navigating to its roster. Shows game status if playing today.
+    private func teamRow(teamId: Int, name: String, isFavoriteSection: Bool) -> some View {
+        let matchingGame = gameForTeam(teamId)
+        let isFav = favoriteTeamIds.contains(teamId)
+
+        return NavigationLink(destination: GameDetailView(teamId: teamId, teamName: name, game: matchingGame)) {
+            HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(team.name)
-                    Text(gameDescription(for: team, in: game))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    HStack(spacing: 6) {
+                        Text(name)
+                        if isFav && !isFavoriteSection {
+                            Image(systemName: "star.fill")
+                                .font(.caption2)
+                                .foregroundStyle(.yellow)
+                        }
+                    }
+                    if let game = matchingGame {
+                        Text(gameDescription(teamId: teamId, game: game))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
+                Spacer()
             }
-            .contextMenu {
-                unfavoriteButton(team)
-            }
-        } else {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(team.name)
-                Text("No game today")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-            }
-            .contextMenu {
-                unfavoriteButton(team)
+        }
+        .contextMenu {
+            Button {
+                FavoriteItem.toggle(kind: .team, entityId: teamId, name: name, in: modelContext)
+            } label: {
+                Label(
+                    isFav ? "Unfavorite \(name)" : "Favorite \(name)",
+                    systemImage: isFav ? "star.slash" : "star"
+                )
             }
         }
     }
@@ -182,87 +190,79 @@ struct ContentView: View {
             }
         }
         .contextMenu {
-            unfavoriteButton(player)
+            Button(role: .destructive) {
+                modelContext.delete(player)
+            } label: {
+                Label("Remove from Favorites", systemImage: "star.slash")
+            }
         }
     }
 
-    /// Builds a short game description for a favorited team, e.g. "vs Red Sox · Scheduled".
-    private func gameDescription(for team: FavoriteItem, in game: ScheduleEntry) -> String {
-        let isHome = game.teams.home.team.id == team.entityId
+    // MARK: - Helpers
+
+    /// Finds today's game for a team, if any.
+    private func gameForTeam(_ teamId: Int) -> ScheduleEntry? {
+        games.first {
+            $0.teams.away.team.id == teamId || $0.teams.home.team.id == teamId
+        }
+    }
+
+    /// Builds a short game description, e.g. "vs Red Sox · Scheduled".
+    private func gameDescription(teamId: Int, game: ScheduleEntry) -> String {
+        let isHome = game.teams.home.team.id == teamId
         let opponent = isHome ? game.teams.away.team.name : game.teams.home.team.name
         let prefix = isHome ? "vs" : "@"
         return "\(prefix) \(opponent) · \(game.status.displayText)"
     }
 
-    // MARK: - Context Menus
-
-    /// Context menu buttons offering to favorite/unfavorite both teams in a game.
-    @ViewBuilder
-    private func teamContextMenuButtons(for game: ScheduleEntry) -> some View {
-        let awayId = game.teams.away.team.id
-        let awayName = game.teams.away.team.name
-        let homeId = game.teams.home.team.id
-        let homeName = game.teams.home.team.name
-
-        let awayIsFav = favoriteTeamIds.contains(awayId)
-        let homeIsFav = favoriteTeamIds.contains(homeId)
-
-        Button {
-            FavoriteItem.toggle(kind: .team, entityId: awayId, name: awayName, in: modelContext)
-        } label: {
-            Label(
-                awayIsFav ? "Unfavorite \(awayName)" : "Favorite \(awayName)",
-                systemImage: awayIsFav ? "star.slash" : "star"
-            )
-        }
-
-        Button {
-            FavoriteItem.toggle(kind: .team, entityId: homeId, name: homeName, in: modelContext)
-        } label: {
-            Label(
-                homeIsFav ? "Unfavorite \(homeName)" : "Favorite \(homeName)",
-                systemImage: homeIsFav ? "star.slash" : "star"
-            )
-        }
-    }
-
-    /// An unfavorite button for use in favorite-row context menus.
-    private func unfavoriteButton(_ item: FavoriteItem) -> some View {
-        Button(role: .destructive) {
-            modelContext.delete(item)
-        } label: {
-            Label("Remove from Favorites", systemImage: "star.slash")
-        }
-    }
-
     // MARK: - Data Loading
 
-    private func loadSchedule() async {
-        // Only show the loading spinner on a cold first load.
-        // Re-appears and background refreshes update the list in place.
-        if games.isEmpty {
-            isLoading = true
-        }
-        errorMessage = nil
-        do {
-            games = try await SwiftBaseball.schedule(.date(todayString)).fetch()
-        } catch is CancellationError {
-            // Refresh task was cancelled (e.g. the refreshable context was torn down);
-            // leave existing games/error state intact rather than surfacing a spurious error.
-        } catch {
-            // Only surface an error if there's nothing to show.
-            if games.isEmpty {
-                errorMessage = error.localizedDescription
+    /// Loads teams from SwiftData cache on first launch only.
+    private func loadTeamsIfNeeded() async {
+        guard cachedTeams.isEmpty else { return }
+        isLoadingTeams = true
+        await refreshTeams()
+        isLoadingTeams = false
+    }
+
+    /// Fetches all MLB teams from the API and upserts into SwiftData.
+    private func refreshTeams() async {
+        let season = Calendar.current.component(.year, from: Date())
+        guard let teams = try? await SwiftBaseball.teams(.all(season: season)).fetch() else { return }
+
+        for team in teams {
+            let descriptor = FetchDescriptor<CachedTeam>(
+                predicate: #Predicate { $0.teamId == team.id }
+            )
+            if let existing = try? modelContext.fetch(descriptor).first {
+                existing.name = team.name
+                existing.abbreviation = team.abbreviation
+                existing.divisionName = team.division.name
+                existing.leagueName = team.league.name
+                existing.venueName = team.venue.name
+                existing.updatedAt = Date()
+            } else {
+                modelContext.insert(CachedTeam(
+                    teamId: team.id,
+                    name: team.name,
+                    abbreviation: team.abbreviation,
+                    divisionName: team.division.name,
+                    leagueName: team.league.name,
+                    venueName: team.venue.name
+                ))
             }
         }
-        isLoading = false
+    }
+
+    /// Loads today's schedule in the background for game status display.
+    private func loadScheduleInBackground() async {
+        guard let result = try? await SwiftBaseball.schedule(.date(todayString)).fetch() else { return }
+        games = result
     }
 }
 
 private extension GameStatus {
     /// Display label for use in the UI.
-    /// All terminal states (final, completed early, game over) collapse to "Final"
-    /// so the presentation is consistent regardless of how the game ended.
     var displayText: String {
         switch self {
         case .final, .completedEarly, .gameOver: "Final"
@@ -271,51 +271,7 @@ private extension GameStatus {
     }
 }
 
-/// A spoiler-free row displaying two team names, game status, and venue.
-///
-/// Scores and winner indicators are intentionally omitted.
-/// A small star icon appears next to favorited team names.
-struct GameRow: View {
-    let game: ScheduleEntry
-    var favoriteTeamIds: Set<Int> = []
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Text(game.teams.away.team.name)
-                if favoriteTeamIds.contains(game.teams.away.team.id) {
-                    Image(systemName: "star.fill")
-                        .font(.caption2)
-                        .foregroundStyle(.yellow)
-                }
-                Spacer()
-            }
-            HStack {
-                Text(game.teams.home.team.name)
-                if favoriteTeamIds.contains(game.teams.home.team.id) {
-                    Image(systemName: "star.fill")
-                        .font(.caption2)
-                        .foregroundStyle(.yellow)
-                }
-                Spacer()
-            }
-            HStack {
-                Text(game.status.displayText)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                if let venue = game.venue {
-                    Text("• \(venue.name)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-        }
-        .padding(.vertical, 4)
-        .accessibilityElement(children: .combine)
-    }
-}
-
 #Preview {
     ContentView()
-        .modelContainer(for: FavoriteItem.self, inMemory: true)
+        .modelContainer(for: [FavoriteItem.self, CachedTeam.self], inMemory: true)
 }

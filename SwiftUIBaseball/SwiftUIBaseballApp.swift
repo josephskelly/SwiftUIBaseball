@@ -23,6 +23,7 @@ struct SwiftUIBaseballApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             FavoriteItem.self,
+            CachedTeam.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 

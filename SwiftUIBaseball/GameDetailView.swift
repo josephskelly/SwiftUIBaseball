@@ -14,12 +14,30 @@ enum SortField: String, CaseIterable {
     case number, name, ops, vsLeft, vsRight, gbPercent, fbPercent, hand
 }
 
-struct GameDetailView: View {
-    let game: ScheduleEntry
+/// How the roster view was entered — from a game or from a team.
+enum RosterSource {
+    /// Two-team game view (existing behavior).
+    case game(ScheduleEntry)
+    /// Single-team entry from the teams list, with an optional game for the opponent tab.
+    case team(id: Int, name: String, game: ScheduleEntry?)
+}
 
-    @State private var selectedTeam: TeamSide = .away
-    @State private var awayRoster: [RosterEntry] = []
-    @State private var homeRoster: [RosterEntry] = []
+struct GameDetailView: View {
+    let source: RosterSource
+
+    /// Convenience init for navigating from a game (existing call sites).
+    init(game: ScheduleEntry) {
+        self.source = .game(game)
+    }
+
+    /// Convenience init for navigating from a team, with an optional game for opponent tab.
+    init(teamId: Int, teamName: String, game: ScheduleEntry? = nil) {
+        self.source = .team(id: teamId, name: teamName, game: game)
+    }
+
+    @State private var selectedSide: Int = 0
+    @State private var primaryRoster: [RosterEntry] = []
+    @State private var secondaryRoster: [RosterEntry] = []
     @State private var playerStats: [Int: PlayerSeasonStats] = [:]
     @State private var players: [Int: Player] = [:]
     @State private var batterPlatoon: [Int: PlayerPlatoonStats] = [:]
@@ -38,27 +56,100 @@ struct GameDetailView: View {
     @Environment(\.verticalSizeClass)   private var verticalSizeClass
     private var isWide: Bool { horizontalSizeClass == .regular || verticalSizeClass == .compact }
 
-    /// Use the game's own season, falling back to current calendar year.
-    private var gameSeason: Int {
-        Int(game.season) ?? Calendar.current.component(.year, from: Date())
+    // MARK: - Source-derived Properties
+
+    /// The primary team ID (the team the user navigated to, or the away team).
+    private var primaryTeamId: Int {
+        switch source {
+        case .game(let entry): entry.teams.away.team.id
+        case .team(let id, _, _): id
+        }
     }
 
-    /// The season year used for stats fetches — always matches the game's own season.
-    private var statsSeasonYear: Int { gameSeason }
+    /// The primary team name.
+    private var primaryTeamName: String {
+        switch source {
+        case .game(let entry): entry.teams.away.team.name
+        case .team(_, let name, _): name
+        }
+    }
 
-    enum TeamSide: String, CaseIterable, Identifiable {
-        case away, home
-        var id: String { rawValue }
+    /// The secondary (opponent) team ID, if available.
+    private var secondaryTeamId: Int? {
+        switch source {
+        case .game(let entry):
+            return entry.teams.home.team.id
+        case .team(let id, _, let game):
+            guard let game else { return nil }
+            // The opponent is whichever team is NOT the primary
+            if game.teams.away.team.id == id {
+                return game.teams.home.team.id
+            } else {
+                return game.teams.away.team.id
+            }
+        }
+    }
+
+    /// The secondary (opponent) team name, if available.
+    private var secondaryTeamName: String? {
+        switch source {
+        case .game(let entry):
+            return entry.teams.home.team.name
+        case .team(let id, _, let game):
+            guard let game else { return nil }
+            if game.teams.away.team.id == id {
+                return game.teams.home.team.name
+            } else {
+                return game.teams.away.team.name
+            }
+        }
+    }
+
+    /// Whether there is an opponent (i.e. whether the picker should show).
+    private var hasOpponent: Bool { secondaryTeamId != nil }
+
+    /// The season year for roster and stats fetches.
+    private var seasonYear: Int {
+        switch source {
+        case .game(let entry):
+            return Int(entry.season) ?? Calendar.current.component(.year, from: Date())
+        case .team(_, _, let game):
+            if let game { return Int(game.season) ?? Calendar.current.component(.year, from: Date()) }
+            return Calendar.current.component(.year, from: Date())
+        }
+    }
+
+    /// The game type filter for stats (e.g. `.regularSeason`).
+    private var gameType: GameType {
+        switch source {
+        case .game(let entry): entry.gameType
+        case .team(_, _, let game): game?.gameType ?? .regularSeason
+        }
+    }
+
+    /// Cache key for the StatsCache (uses gamePk when available).
+    private var cacheKey: Int? {
+        switch source {
+        case .game(let entry): entry.id
+        case .team(_, _, let game): game?.id
+        }
+    }
+
+    /// The team name for the currently selected roster side.
+    private var selectedTeamName: String {
+        selectedSide == 0 ? primaryTeamName : (secondaryTeamName ?? primaryTeamName)
     }
 
     var body: some View {
         VStack(spacing: 0) {
-            Picker("Team", selection: $selectedTeam) {
-                Text(game.teams.away.team.name).tag(TeamSide.away)
-                Text(game.teams.home.team.name).tag(TeamSide.home)
+            if hasOpponent {
+                Picker("Team", selection: $selectedSide) {
+                    Text(primaryTeamName).tag(0)
+                    Text(secondaryTeamName ?? "").tag(1)
+                }
+                .pickerStyle(.segmented)
+                .padding()
             }
-            .pickerStyle(.segmented)
-            .padding()
 
             Group {
                 if isLoading {
@@ -71,7 +162,7 @@ struct GameDetailView: View {
                         description: Text(errorMessage)
                     )
                 } else {
-                    rosterList(for: selectedTeam)
+                    rosterList(primary: selectedSide == 0)
                 }
             }
         }
@@ -80,7 +171,7 @@ struct GameDetailView: View {
         .task {
             await loadRosters()
         }
-        .onChange(of: selectedTeam) {
+        .onChange(of: selectedSide) {
             sortField = .name
             sortAscending = true
         }
@@ -94,20 +185,18 @@ struct GameDetailView: View {
     }
 
     private var navigationTitle: String {
-        let away = game.teams.away.team.name
-        let home = game.teams.home.team.name
-        return "\(away) @ \(home)"
+        if let secondaryName = secondaryTeamName {
+            return "\(primaryTeamName) @ \(secondaryName)"
+        }
+        return primaryTeamName
     }
 
     // MARK: - Roster Grid
 
     /// Scrollable roster grid for the selected team side.
-    ///
-    /// Uses a `Grid` layout so that column alignment is automatic across
-    /// section headers and data rows, eliminating manual frame-width matching.
     @ViewBuilder
-    private func rosterList(for side: TeamSide) -> some View {
-        let roster = side == .away ? awayRoster : homeRoster
+    private func rosterList(primary: Bool) -> some View {
+        let roster = primary ? primaryRoster : secondaryRoster
         let pitchers = sorted(roster.filter { $0.position == .pitcher }, isPitcher: true)
         let positionPlayers = sorted(roster.filter { $0.position != .pitcher }, isPitcher: false)
 
@@ -129,12 +218,10 @@ struct GameDetailView: View {
                 stats: playerStats[entry.id],
                 batterPlatoon: batterPlatoon[entry.id],
                 pitcherPlatoon: pitcherPlatoon[entry.id],
-                season: statsSeasonYear,
+                season: seasonYear,
                 preloadedStatcast: statcastBatting[entry.id],
                 preloadedStatcastPitching: statcastPitching[entry.id],
-                teamName: selectedTeam == .away
-                    ? game.teams.away.team.name
-                    : game.teams.home.team.name
+                teamName: selectedTeamName
             )
         }
     }
@@ -310,16 +397,13 @@ struct GameDetailView: View {
     @ViewBuilder
     private func playerContextMenu(entry: RosterEntry) -> some View {
         let isFav = FavoriteItem.isFavorited(entityId: entry.id, in: modelContext)
-        let teamName = selectedTeam == .away
-            ? game.teams.away.team.name
-            : game.teams.home.team.name
 
         Button {
             FavoriteItem.toggle(
                 kind: .player,
                 entityId: entry.id,
                 name: entry.person.fullName,
-                teamName: teamName,
+                teamName: selectedTeamName,
                 position: entry.position.displayName,
                 positionCode: entry.position.rawValue,
                 jerseyNumber: entry.jerseyNumber,
@@ -385,9 +469,9 @@ struct GameDetailView: View {
 
     private func loadRosters() async {
         // Warm path: return immediately from cache.
-        if let cached = await StatsCache.shared.entry(for: game.id) {
-            awayRoster     = cached.awayRoster
-            homeRoster     = cached.homeRoster
+        if let key = cacheKey, let cached = await StatsCache.shared.entry(for: key) {
+            primaryRoster  = cached.awayRoster
+            secondaryRoster = cached.homeRoster
             players        = cached.players
             playerStats    = cached.playerStats
             batterPlatoon  = cached.batterPlatoon
@@ -398,14 +482,14 @@ struct GameDetailView: View {
         isLoading = true
         errorMessage = nil
 
-        let awayId = game.teams.away.team.id
-        let homeId = game.teams.home.team.id
-
         do {
-            async let awayResult = SwiftBaseball.roster(teamId: awayId, season: gameSeason).fetch()
-            async let homeResult = SwiftBaseball.roster(teamId: homeId, season: gameSeason).fetch()
-            awayRoster = try await awayResult
-            homeRoster = try await homeResult
+            let primaryResult = try await SwiftBaseball.roster(teamId: primaryTeamId, season: seasonYear).fetch()
+            primaryRoster = primaryResult
+
+            if let secondaryId = secondaryTeamId {
+                let secondaryResult = try await SwiftBaseball.roster(teamId: secondaryId, season: seasonYear).fetch()
+                secondaryRoster = secondaryResult
+            }
         } catch {
             errorMessage = error.localizedDescription
             isLoading = false
@@ -415,29 +499,31 @@ struct GameDetailView: View {
         // Roster is ready — show the list now. Stats load in the background.
         isLoading = false
 
-        let allEntries = awayRoster + homeRoster
+        let allEntries = primaryRoster + secondaryRoster
         await loadPlayerStats(for: allEntries)
 
         // Cache after stats are complete so re-visits are instant and fully populated.
-        await StatsCache.shared.set(
-            StatsCache.Entry(
-                awayRoster: awayRoster,
-                homeRoster: homeRoster,
-                players: players,
-                playerStats: playerStats,
-                batterPlatoon: batterPlatoon,
-                pitcherPlatoon: pitcherPlatoon
-            ),
-            for: game.id
-        )
+        if let key = cacheKey {
+            await StatsCache.shared.set(
+                StatsCache.Entry(
+                    awayRoster: primaryRoster,
+                    homeRoster: secondaryRoster,
+                    players: players,
+                    playerStats: playerStats,
+                    batterPlatoon: batterPlatoon,
+                    pitcherPlatoon: pitcherPlatoon
+                ),
+                for: key
+            )
+        }
 
         // Begin background Statcast loading after season stats are ready.
         startStatcastLoading()
     }
 
     private func loadPlayerStats(for entries: [RosterEntry]) async {
-        let season = statsSeasonYear
-        let gameType = game.gameType
+        let season = seasonYear
+        let gt = gameType
         await withTaskGroup(of: (Int, Player?, PlayerSeasonStats?, PlayerPlatoonStats?, PitcherPlatoonStats?).self) { group in
             for entry in entries {
                 let isPitcher = entry.position == .pitcher
@@ -450,7 +536,7 @@ struct GameDetailView: View {
                         .playerStats(id: entry.id)
                         .season(season)
                         .group(statGroup)
-                        .gameType(gameType)
+                        .gameType(gt)
                         .fetch().first
 
                     // Platoon splits filtered by game type
@@ -460,7 +546,7 @@ struct GameDetailView: View {
                         if let result = try? await SwiftBaseball
                             .pitcherPlatoonStats(id: entry.id)
                             .season(season)
-                            .gameType(gameType)
+                            .gameType(gt)
                             .fetch(),
                            result.vsLeft?.ops != nil || result.vsRight?.ops != nil {
                             pPlatoon = result
@@ -469,7 +555,7 @@ struct GameDetailView: View {
                         if let result = try? await SwiftBaseball
                             .playerPlatoonStats(id: entry.id)
                             .season(season)
-                            .gameType(gameType)
+                            .gameType(gt)
                             .fetch(),
                            result.vsLeft?.ops != nil || result.vsRight?.ops != nil {
                             bPlatoon = result
@@ -498,8 +584,8 @@ struct GameDetailView: View {
     /// freshly-opened player card gets data as quickly as possible.
     private func startStatcastLoading(prioritizeId: Int? = nil) {
         statcastTask?.cancel()
-        let season = statsSeasonYear
-        let allEntries = awayRoster + homeRoster
+        let season = seasonYear
+        let allEntries = primaryRoster + secondaryRoster
 
         statcastTask = Task {
             var ordered = allEntries
@@ -707,5 +793,12 @@ func compareOptionalDoubles(_ lhs: Double?, _ rhs: Double?) -> ComparisonResult 
         GameDetailView(game: .preview)
     }
     .environment(\.horizontalSizeClass, .regular)
+    .modelContainer(for: FavoriteItem.self, inMemory: true)
+}
+
+#Preview("Single Team") {
+    NavigationStack {
+        GameDetailView(teamId: 147, teamName: "New York Yankees")
+    }
     .modelContainer(for: FavoriteItem.self, inMemory: true)
 }
