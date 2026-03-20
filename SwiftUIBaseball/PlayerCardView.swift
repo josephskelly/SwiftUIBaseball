@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import SwiftData
 import SwiftBaseball
 
 /// A modal card displaying all available data for a single player.
@@ -31,7 +32,10 @@ struct PlayerCardView: View {
     let preloadedStatcast: StatcastBatting?
     /// Pre-fetched Statcast pitching data from the roster grid's background loader.
     let preloadedStatcastPitching: StatcastPitching?
+    /// The team name for the player, used when toggling favorites.
+    var teamName: String?
 
+    @Environment(\.modelContext) private var modelContext
     @State private var statcast: StatcastBatting?
     @State private var statcastPitching: StatcastPitching?
     @State private var isLoadingStatcast = false
@@ -99,6 +103,26 @@ struct PlayerCardView: View {
                 }
             }
             .task { await loadStatcast() }
+        }
+        .contextMenu {
+            let isFav = FavoriteItem.isFavorited(entityId: entry.id, in: modelContext)
+            Button {
+                FavoriteItem.toggle(
+                    kind: .player,
+                    entityId: entry.id,
+                    name: entry.person.fullName,
+                    teamName: teamName,
+                    position: entry.position.displayName,
+                    positionCode: entry.position.rawValue,
+                    jerseyNumber: entry.jerseyNumber,
+                    in: modelContext
+                )
+            } label: {
+                Label(
+                    isFav ? "Unfavorite" : "Favorite",
+                    systemImage: isFav ? "star.slash" : "star"
+                )
+            }
         }
     }
 
@@ -567,8 +591,10 @@ struct PlayerCardView: View {
         pitcherPlatoon: nil,
         season: 2024,
         preloadedStatcast: nil,
-        preloadedStatcastPitching: nil
+        preloadedStatcastPitching: nil,
+        teamName: "New York Yankees"
     )
+    .modelContainer(for: FavoriteItem.self, inMemory: true)
 }
 
 #Preview("Pitcher – Full Data") {
@@ -580,8 +606,10 @@ struct PlayerCardView: View {
         pitcherPlatoon: .preview,
         season: 2023,
         preloadedStatcast: nil,
-        preloadedStatcastPitching: nil
+        preloadedStatcastPitching: nil,
+        teamName: "New York Yankees"
     )
+    .modelContainer(for: FavoriteItem.self, inMemory: true)
 }
 
 #Preview("No Stats") {
@@ -593,8 +621,10 @@ struct PlayerCardView: View {
         pitcherPlatoon: nil,
         season: 2024,
         preloadedStatcast: nil,
-        preloadedStatcastPitching: nil
+        preloadedStatcastPitching: nil,
+        teamName: "New York Yankees"
     )
+    .modelContainer(for: FavoriteItem.self, inMemory: true)
 }
 
 #Preview("Dark Mode") {
@@ -606,7 +636,9 @@ struct PlayerCardView: View {
         pitcherPlatoon: nil,
         season: 2024,
         preloadedStatcast: nil,
-        preloadedStatcastPitching: nil
+        preloadedStatcastPitching: nil,
+        teamName: "New York Yankees"
     )
     .preferredColorScheme(.dark)
+    .modelContainer(for: FavoriteItem.self, inMemory: true)
 }

@@ -286,4 +286,23 @@ extension StatcastPitching {
         ]
     )
 }
+// MARK: - FavoriteItem mocks
+
+extension FavoriteItem {
+    /// A mock favorited team (New York Yankees).
+    static let previewTeam = FavoriteItem(
+        kind: .team, entityId: 147, name: "New York Yankees"
+    )
+
+    /// A mock favorited player (Aaron Judge).
+    static let previewPlayer = FavoriteItem(
+        kind: .player,
+        entityId: 592450,
+        name: "Aaron Judge",
+        teamName: "New York Yankees",
+        position: "Right Fielder",
+        positionCode: "9",
+        jerseyNumber: "99"
+    )
+}
 #endif

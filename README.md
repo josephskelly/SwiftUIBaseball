@@ -14,6 +14,7 @@ A demo SwiftUI app showcasing the [SwiftBaseball](https://github.com/josephskell
 - "No season stats available" fallback on player cards when the API returns no data (e.g. spring training rosters)
 - Handedness indicator (L / R / S) for batters and pitchers
 - In-memory stats cache: re-visiting a game detail is instant (no network round-trips)
+- **Favorites with SwiftData persistence**: long-press any game row to favorite teams or any player row to favorite players; favorites surface on the home screen with today's game status for teams and tappable player cards; data persists across app launches
 
 ## Requirements
 
@@ -77,8 +78,10 @@ A free Apple ID allows sideloading to your own device for 7 days before re-signi
 SwiftUIBaseball/
 ├── SwiftUIBaseball/
 │   ├── SwiftUIBaseballApp.swift   # App entry point, SwiftData container setup
-│   ├── ContentView.swift          # Today's schedule list
+│   ├── ContentView.swift          # Today's schedule list + favorites sections
 │   ├── GameDetailView.swift       # Roster + player stats per game
+│   ├── PlayerCardView.swift       # Player detail modal (bio, stats, Statcast)
+│   ├── FavoriteItem.swift         # SwiftData model for persisted favorites
 │   ├── StatsCache.swift           # In-memory actor cache (keyed by gamePk)
 │   ├── Formatters.swift           # OPS formatting, name abbreviation helpers
 │   └── PreviewHelpers.swift       # Mock data for SwiftUI previews

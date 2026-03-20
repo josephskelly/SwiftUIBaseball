@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 import SwiftBaseball
 
 /// Column that the roster list can be sorted by.
@@ -32,6 +33,7 @@ struct GameDetailView: View {
     @State private var sortField: SortField = .name
     @State private var sortAscending: Bool = true
 
+    @Environment(\.modelContext) private var modelContext
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.verticalSizeClass)   private var verticalSizeClass
     private var isWide: Bool { horizontalSizeClass == .regular || verticalSizeClass == .compact }
@@ -129,7 +131,10 @@ struct GameDetailView: View {
                 pitcherPlatoon: pitcherPlatoon[entry.id],
                 season: statsSeasonYear,
                 preloadedStatcast: statcastBatting[entry.id],
-                preloadedStatcastPitching: statcastPitching[entry.id]
+                preloadedStatcastPitching: statcastPitching[entry.id],
+                teamName: selectedTeam == .away
+                    ? game.teams.away.team.name
+                    : game.teams.home.team.name
             )
         }
     }
@@ -231,6 +236,7 @@ struct GameDetailView: View {
             .padding(.vertical, 12)
             .contentShape(Rectangle())
             .onTapGesture { selectedRosterEntry = entry }
+            .contextMenu { playerContextMenu(entry: entry) }
             .accessibilityAddTraits(.isButton)
             .accessibilityElement(children: .combine)
         }
@@ -296,6 +302,35 @@ struct GameDetailView: View {
             return "\(label), sorted \(sortAscending ? "ascending" : "descending")"
         }
         return "Sort by \(label)"
+    }
+
+    // MARK: - Context Menu
+
+    /// Context menu for a player row with a favorite/unfavorite action.
+    @ViewBuilder
+    private func playerContextMenu(entry: RosterEntry) -> some View {
+        let isFav = FavoriteItem.isFavorited(entityId: entry.id, in: modelContext)
+        let teamName = selectedTeam == .away
+            ? game.teams.away.team.name
+            : game.teams.home.team.name
+
+        Button {
+            FavoriteItem.toggle(
+                kind: .player,
+                entityId: entry.id,
+                name: entry.person.fullName,
+                teamName: teamName,
+                position: entry.position.displayName,
+                positionCode: entry.position.rawValue,
+                jerseyNumber: entry.jerseyNumber,
+                in: modelContext
+            )
+        } label: {
+            Label(
+                isFav ? "Unfavorite \(abbreviatedName(entry.person.fullName))" : "Favorite \(abbreviatedName(entry.person.fullName))",
+                systemImage: isFav ? "star.slash" : "star"
+            )
+        }
     }
 
     // MARK: - Sorting
@@ -656,6 +691,7 @@ func compareOptionalDoubles(_ lhs: Double?, _ rhs: Double?) -> ComparisonResult 
     NavigationStack {
         GameDetailView(game: .preview)
     }
+    .modelContainer(for: FavoriteItem.self, inMemory: true)
 }
 
 #Preview("iPhone – Landscape", traits: .landscapeLeft) {
@@ -663,6 +699,7 @@ func compareOptionalDoubles(_ lhs: Double?, _ rhs: Double?) -> ComparisonResult 
         GameDetailView(game: .preview)
     }
     .environment(\.verticalSizeClass, .compact)
+    .modelContainer(for: FavoriteItem.self, inMemory: true)
 }
 
 #Preview("iPad – Wide") {
@@ -670,4 +707,5 @@ func compareOptionalDoubles(_ lhs: Double?, _ rhs: Double?) -> ComparisonResult 
         GameDetailView(game: .preview)
     }
     .environment(\.horizontalSizeClass, .regular)
+    .modelContainer(for: FavoriteItem.self, inMemory: true)
 }
