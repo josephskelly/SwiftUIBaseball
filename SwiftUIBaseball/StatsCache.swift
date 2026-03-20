@@ -51,6 +51,11 @@ actor StatsCache {
         cache[gamePk] = entry
     }
 
+    /// Removes the cached entry for `gamePk` so the next load re-fetches from the network.
+    func removeEntry(for gamePk: Int) {
+        cache.removeValue(forKey: gamePk)
+    }
+
     // MARK: - Statcast Cache (L1)
 
     /// Statcast data keyed by `"playerId-season"`.

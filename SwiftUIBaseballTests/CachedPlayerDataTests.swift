@@ -234,6 +234,20 @@ struct CachedTeamSeedTests {
         #expect(result == nil)
     }
 
+    @Test func removeEntryEvictsL1Cache() async {
+        let cache = StatsCache()
+        let entry = StatsCache.Entry(
+            awayRoster: [], homeRoster: [],
+            players: [:], playerStats: [:],
+            batterPlatoon: [:], pitcherPlatoon: [:]
+        )
+        await cache.set(entry, for: 12345)
+        #expect(await cache.entry(for: 12345) != nil)
+
+        await cache.removeEntry(for: 12345)
+        #expect(await cache.entry(for: 12345) == nil)
+    }
+
     @Test func persistSkipsAllNilFields() async throws {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try ModelContainer(

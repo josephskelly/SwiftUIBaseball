@@ -184,6 +184,19 @@ struct GameDetailView: View {
         .onDisappear {
             statcastTask?.cancel()
         }
+        #if os(macOS)
+        .toolbar {
+            ToolbarItem(placement: .automatic) {
+                Button {
+                    Task { await refreshRosters() }
+                } label: {
+                    Label("Refresh", systemImage: "arrow.clockwise")
+                }
+                .disabled(isLoading)
+                .accessibilityLabel("Refresh roster data")
+            }
+        }
+        #endif
     }
 
     private var navigationTitle: String {
@@ -213,6 +226,7 @@ struct GameDetailView: View {
             }
             .padding(.horizontal)
         }
+        .refreshable { await refreshRosters() }
         .sheet(item: $selectedRosterEntry) { entry in
             PlayerCardView(
                 entry: entry,
@@ -523,6 +537,29 @@ struct GameDetailView: View {
 
         // Begin background Statcast loading after season stats are ready.
         startStatcastLoading()
+    }
+
+    /// Evicts cached data and re-fetches rosters and player stats from the network.
+    private func refreshRosters() async {
+        statcastTask?.cancel()
+
+        // Evict L1 entry so loadRosters bypasses the warm path.
+        if let key = cacheKey {
+            await StatsCache.shared.removeEntry(for: key)
+        }
+
+        // Clear all state so the view shows fresh data only.
+        players = [:]
+        playerStats = [:]
+        batterPlatoon = [:]
+        pitcherPlatoon = [:]
+        statcastBatting = [:]
+        statcastPitching = [:]
+        primaryRoster = []
+        secondaryRoster = []
+        errorMessage = nil
+
+        await loadRosters()
     }
 
     private func loadPlayerStats(for entries: [RosterEntry]) async {

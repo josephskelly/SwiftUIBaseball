@@ -17,7 +17,7 @@ A demo SwiftUI app showcasing the [SwiftBaseball](https://github.com/josephskell
 - "No season stats available" fallback on player cards when the API returns no data (e.g. spring training rosters)
 - Suffix-aware name formatting: "Fernando Tatis Jr." abbreviates to "F. Tatis Jr." (not "F. Jr."); long and accented names scale gracefully without wrapping
 - Handedness indicator (L / R / S) for batters and pitchers
-- Pull-to-refresh bypasses cache TTL to force fresh data from the network
+- Pull-to-refresh on the home screen and roster view bypasses cache to force fresh data from the network; macOS roster view has a toolbar refresh button
 - **Favorites with SwiftData persistence**: long-press any team or player row to favorite; favorites surface at the top of the home screen with tappable player cards; star toggle on player cards; data persists across app launches
 
 ## Requirements

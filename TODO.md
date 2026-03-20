@@ -43,6 +43,6 @@
 [ ] Design note: Statcast data (StatcastBatting/StatcastPitching) stays L1-only because those types have internal-only memberwise initializers and can't be
   reconstructed from outside the SwiftBaseball module. The L2 cache handles the highest-impact types: player bio, season stats, and platoon splits. Deeper Exploration needed.
 
-[ ] Need a way to refresh the GameDetailView
+[X] Need a way to refresh the GameDetailView. Added pull-to-refresh on iOS and a toolbar refresh button on macOS.
 
 [X] L2 cache poisoning: cancelled or failed API fetches created empty SwiftData records that masked as cache hits for 24 hours, preventing re-fetch of player bios and platoon splits. Fixed with guards in persistPlayer and cachedPlayer.
