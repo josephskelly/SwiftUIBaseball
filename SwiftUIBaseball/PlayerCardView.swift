@@ -269,6 +269,12 @@ struct PlayerCardView: View {
             statcast = cached
             return
         }
+        if let cached = await StatsCache.shared.cachedPlayer(id: entry.id, season: season),
+           let sb = cached.statcastBatting {
+            statcast = sb
+            await StatsCache.shared.setStatcast(sb, playerId: entry.id, season: season)
+            return
+        }
         isLoadingStatcast = true
         if let result = try? await SwiftBaseball
             .statcastBatting(playerId: entry.id)
@@ -276,6 +282,9 @@ struct PlayerCardView: View {
             .fetch() {
             statcast = result
             await StatsCache.shared.setStatcast(result, playerId: entry.id, season: season)
+            await StatsCache.shared.persistPlayer(
+                id: entry.id, season: season, statcastBatting: result
+            )
         }
         isLoadingStatcast = false
     }
@@ -292,6 +301,12 @@ struct PlayerCardView: View {
             statcastPitching = cached
             return
         }
+        if let cached = await StatsCache.shared.cachedPlayer(id: entry.id, season: season),
+           let sp = cached.statcastPitching {
+            statcastPitching = sp
+            await StatsCache.shared.setStatcastPitching(sp, playerId: entry.id, season: season)
+            return
+        }
         isLoadingStatcast = true
         if let result = try? await SwiftBaseball
             .statcastPitching(playerId: entry.id)
@@ -299,6 +314,9 @@ struct PlayerCardView: View {
             .fetch() {
             statcastPitching = result
             await StatsCache.shared.setStatcastPitching(result, playerId: entry.id, season: season)
+            await StatsCache.shared.persistPlayer(
+                id: entry.id, season: season, statcastPitching: result
+            )
         }
         isLoadingStatcast = false
     }

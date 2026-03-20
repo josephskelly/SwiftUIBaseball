@@ -123,7 +123,9 @@ actor StatsCache {
         player: Player?,
         stats: PlayerSeasonStats?,
         batterPlatoon: PlayerPlatoonStats?,
-        pitcherPlatoon: PitcherPlatoonStats?
+        pitcherPlatoon: PitcherPlatoonStats?,
+        statcastBatting: StatcastBatting?,
+        statcastPitching: StatcastPitching?
     )? {
         guard let context else { return nil }
         let key = "\(id)-\(season)"
@@ -142,17 +144,20 @@ actor StatsCache {
         let pPlatoon = cached.pitcherPlatoonJSON.flatMap {
             (try? decoder.decode(CodablePitcherPlatoonStats.self, from: $0))?.toModel
         }
+        let scBatting = cached.statcastBattingJSON.flatMap {
+            try? decoder.decode(StatcastBatting.self, from: $0)
+        }
+        let scPitching = cached.statcastPitchingJSON.flatMap {
+            try? decoder.decode(StatcastPitching.self, from: $0)
+        }
 
         // Treat all-nil decoded fields as a cache miss so the entry gets re-fetched.
         guard player != nil || stats != nil || bPlatoon != nil || pPlatoon != nil else { return nil }
 
-        return (player, stats, bPlatoon, pPlatoon)
+        return (player, stats, bPlatoon, pPlatoon, scBatting, scPitching)
     }
 
     /// Persists player data to SwiftData, upserting by player ID + season.
-    ///
-    /// Only persists types that support round-trip serialization (Player,
-    /// PlayerSeasonStats, platoon stats). Statcast data stays in L1 only.
     ///
     /// - Parameters:
     ///   - id: MLB player ID.
@@ -161,16 +166,21 @@ actor StatsCache {
     ///   - stats: Season stats.
     ///   - batterPlatoon: Batter platoon splits.
     ///   - pitcherPlatoon: Pitcher platoon splits.
+    ///   - statcastBatting: Statcast batted-ball data.
+    ///   - statcastPitching: Statcast pitching arsenal data.
     func persistPlayer(
         id: Int,
         season: Int,
         player: Player? = nil,
         stats: PlayerSeasonStats? = nil,
         batterPlatoon: PlayerPlatoonStats? = nil,
-        pitcherPlatoon: PitcherPlatoonStats? = nil
+        pitcherPlatoon: PitcherPlatoonStats? = nil,
+        statcastBatting: StatcastBatting? = nil,
+        statcastPitching: StatcastPitching? = nil
     ) {
         // Don't create empty records — they poison the cache for 24 hours.
-        guard player != nil || stats != nil || batterPlatoon != nil || pitcherPlatoon != nil else { return }
+        guard player != nil || stats != nil || batterPlatoon != nil || pitcherPlatoon != nil
+              || statcastBatting != nil || statcastPitching != nil else { return }
         guard let context else { return }
         let key = "\(id)-\(season)"
         let descriptor = FetchDescriptor<CachedPlayerData>(
@@ -190,6 +200,8 @@ actor StatsCache {
         if let stats { record.seasonStatsJSON = try? encoder.encode(stats) }
         if let batterPlatoon { record.batterPlatoonJSON = try? encoder.encode(CodablePlatoonStats(batterPlatoon)) }
         if let pitcherPlatoon { record.pitcherPlatoonJSON = try? encoder.encode(CodablePitcherPlatoonStats(pitcherPlatoon)) }
+        if let statcastBatting { record.statcastBattingJSON = try? encoder.encode(statcastBatting) }
+        if let statcastPitching { record.statcastPitchingJSON = try? encoder.encode(statcastPitching) }
         record.updatedAt = Date()
 
         try? context.save()

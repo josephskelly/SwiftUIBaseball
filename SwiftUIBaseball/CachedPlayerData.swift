@@ -9,13 +9,9 @@ import SwiftBaseball
 
 /// Persistent cache for per-player MLB data, keyed by player ID and season.
 ///
-/// Stores encoded JSON blobs for player bio, season stats, and platoon splits.
-/// JSON avoids flattening 50+ stat fields into SwiftData columns — queries only
-/// use `playerId` and `season` as keys.
-///
-/// Statcast data (``StatcastBatting``, ``StatcastPitching``) is cached in L1
-/// (in-memory) only because those types lack public initializers for round-trip
-/// serialization.
+/// Stores encoded JSON blobs for player bio, season stats, platoon splits, and
+/// Statcast metrics. JSON avoids flattening 50+ stat fields into SwiftData
+/// columns — queries only use `playerId` and `season` as keys.
 @Model
 final class CachedPlayerData {
 
@@ -39,6 +35,12 @@ final class CachedPlayerData {
 
     /// Encoded ``PitcherPlatoonStats`` via ``CodablePitcherPlatoonStats``.
     var pitcherPlatoonJSON: Data?
+
+    /// Encoded ``StatcastBatting``.
+    var statcastBattingJSON: Data?
+
+    /// Encoded ``StatcastPitching``.
+    var statcastPitchingJSON: Data?
 
     /// When this record was last updated.
     var updatedAt: Date

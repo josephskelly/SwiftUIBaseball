@@ -40,8 +40,8 @@
 
 [ ] Game detail should also show location and broadcast info. The "Final" and "In Progress" statuses still give the impression this data updates in real time when it doesn't.
 
-[ ] Design note: Statcast data (StatcastBatting/StatcastPitching) stays L1-only because those types have internal-only memberwise initializers and can't be
-  reconstructed from outside the SwiftBaseball module. The L2 cache handles the highest-impact types: player bio, season stats, and platoon splits. Deeper Exploration needed.
+[X] Design note: Statcast data (StatcastBatting/StatcastPitching) stays L1-only because those types have internal-only memberwise initializers and can't be
+  reconstructed from outside the SwiftBaseball module. Fixed: added Codable conformance to StatcastBatting, StatcastPitching, and PitchMixEntry in SwiftBaseball. L2 now persists Statcast data alongside player bio, stats, and platoon splits.
 
 [X] Need a way to refresh the GameDetailView. Added pull-to-refresh on iOS and a toolbar refresh button on macOS.
 

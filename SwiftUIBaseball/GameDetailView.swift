@@ -593,6 +593,8 @@ struct GameDetailView: View {
                 if let s = cached.stats { playerStats[entry.id] = s }
                 if let bp = cached.batterPlatoon { batterPlatoon[entry.id] = bp }
                 if let pp = cached.pitcherPlatoon { pitcherPlatoon[entry.id] = pp }
+                if let sb = cached.statcastBatting { statcastBatting[entry.id] = sb }
+                if let sp = cached.statcastPitching { statcastPitching[entry.id] = sp }
 
                 // Queue for platoon backfill if the cache is missing splits.
                 let isPitcher = entry.position == .pitcher
@@ -785,6 +787,10 @@ struct GameDetailView: View {
                         await StatsCache.shared.setStatcastPitching(
                             result, playerId: entry.id, season: season
                         )
+                        await StatsCache.shared.persistPlayer(
+                            id: entry.id, season: season,
+                            statcastPitching: result
+                        )
                     }
                 } else {
                     guard statcastBatting[entry.id] == nil else { continue }
@@ -802,6 +808,10 @@ struct GameDetailView: View {
                         statcastBatting[entry.id] = result
                         await StatsCache.shared.setStatcast(
                             result, playerId: entry.id, season: season
+                        )
+                        await StatsCache.shared.persistPlayer(
+                            id: entry.id, season: season,
+                            statcastBatting: result
                         )
                     }
                 }
