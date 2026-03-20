@@ -18,7 +18,7 @@
 
 [X] Favorite Players lettering is blue instead of white. Fixed with .buttonStyle(.plain). 
 
-[ ] Favorite players don’t have MLB stats api data like Bio and season stats.
+[X] Favorite players don’t have MLB stats api data like Bio and season stats. Fixed — PlayerCardView now self-fetches when data is nil.
 
 [ ] Spring Training sometimes has split squads where a team plays two games on the same day against different opponents. Home page UI does not handle this at all. There could also be doubleheaders and they could even be against different opponents in the regular season.
 
@@ -26,4 +26,6 @@
 
 [X] App doesn't build for macOS — Fixed. Wrapped iOS-only APIs with #if os(iOS) guards. Unit tests now run on macOS without the simulator.
 
-[ ] Tapping on a Favorite player button empty space does nothing. touch must be on name itself instead of anywhere on the button.
+[X] Tapping on a Favorite player button empty space does nothing. Fixed with .contentShape(Rectangle()) on the HStack.
+
+[ ] In general, there's too much fetching going on. Can we stream data or should we just cache everything?

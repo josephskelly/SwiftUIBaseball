@@ -18,14 +18,6 @@ struct PlayerCardView: View {
 
     /// The roster entry identifying the player and their position.
     let entry: RosterEntry
-    /// Biographical data for the player, if available.
-    let player: Player?
-    /// Season statistics, if available.
-    let stats: PlayerSeasonStats?
-    /// Batter platoon splits (position players only), if available.
-    let batterPlatoon: PlayerPlatoonStats?
-    /// Pitcher platoon splits (pitchers only), if available.
-    let pitcherPlatoon: PitcherPlatoonStats?
     /// The season year used to fetch Statcast data on demand.
     let season: Int
     /// Pre-fetched Statcast batting data from the roster grid's background loader.
@@ -36,11 +28,42 @@ struct PlayerCardView: View {
     var teamName: String?
 
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+    @State private var player: Player?
+    @State private var stats: PlayerSeasonStats?
+    @State private var batterPlatoon: PlayerPlatoonStats?
+    @State private var pitcherPlatoon: PitcherPlatoonStats?
     @State private var isFavorited = false
     @State private var statcast: StatcastBatting?
     @State private var statcastPitching: StatcastPitching?
     @State private var isLoadingStatcast = false
-    @Environment(\.dismiss) private var dismiss
+    @State private var isLoadingMLBData = false
+
+    /// Creates a player card, optionally pre-populated with MLB data.
+    ///
+    /// When `player`, `stats`, or platoon data are `nil`, the card fetches them
+    /// from the MLB Stats API on appear.
+    init(
+        entry: RosterEntry,
+        player: Player? = nil,
+        stats: PlayerSeasonStats? = nil,
+        batterPlatoon: PlayerPlatoonStats? = nil,
+        pitcherPlatoon: PitcherPlatoonStats? = nil,
+        season: Int,
+        preloadedStatcast: StatcastBatting? = nil,
+        preloadedStatcastPitching: StatcastPitching? = nil,
+        teamName: String? = nil
+    ) {
+        self.entry = entry
+        self.season = season
+        self.preloadedStatcast = preloadedStatcast
+        self.preloadedStatcastPitching = preloadedStatcastPitching
+        self.teamName = teamName
+        _player = State(initialValue: player)
+        _stats = State(initialValue: stats)
+        _batterPlatoon = State(initialValue: batterPlatoon)
+        _pitcherPlatoon = State(initialValue: pitcherPlatoon)
+    }
 
     private var isPitcher: Bool { entry.position == .pitcher }
 
@@ -85,7 +108,12 @@ struct PlayerCardView: View {
                         }
                     }
 
-                    if stats == nil && batterPlatoon == nil && pitcherPlatoon == nil {
+                    if isLoadingMLBData {
+                        cardSection(title: "Season Stats (\(season))") {
+                            ProgressView()
+                                .frame(maxWidth: .infinity, alignment: .center)
+                        }
+                    } else if stats == nil && batterPlatoon == nil && pitcherPlatoon == nil {
                         cardSection(title: "Season Stats (\(season))") {
                             Text(verbatim: "No \(season) season stats available.")
                                 .font(.subheadline)
@@ -123,6 +151,7 @@ struct PlayerCardView: View {
                     Button("Done") { dismiss() }
                 }
             }
+            .task { await loadMLBData() }
             .task { await loadStatcast() }
             .onAppear {
                 isFavorited = FavoriteItem.isFavorited(entityId: entry.id, in: modelContext)
@@ -131,6 +160,49 @@ struct PlayerCardView: View {
     }
 
     // MARK: - Data Loading
+
+    /// Fetches player bio, season stats, and platoon splits when not pre-populated.
+    ///
+    /// This is the path used when the card is opened from favorites where no
+    /// pre-fetched MLB data is available.
+    private func loadMLBData() async {
+        guard player == nil && stats == nil else { return }
+        isLoadingMLBData = true
+
+        let statGroup: StatGroup = isPitcher ? .pitching : .batting
+
+        async let playerResult = SwiftBaseball.player(id: entry.id).fetch()
+        async let statsResult = SwiftBaseball
+            .playerStats(id: entry.id)
+            .season(season)
+            .group(statGroup)
+            .gameType(.regularSeason)
+            .fetch()
+
+        player = try? await playerResult
+        stats = try? await statsResult.first
+
+        if isPitcher {
+            if let result = try? await SwiftBaseball
+                .pitcherPlatoonStats(id: entry.id)
+                .season(season)
+                .gameType(.regularSeason)
+                .fetch(),
+               result.vsLeft?.ops != nil || result.vsRight?.ops != nil {
+                pitcherPlatoon = result
+            }
+        } else {
+            if let result = try? await SwiftBaseball
+                .playerPlatoonStats(id: entry.id)
+                .season(season)
+                .gameType(.regularSeason)
+                .fetch(),
+               result.vsLeft?.ops != nil || result.vsRight?.ops != nil {
+                batterPlatoon = result
+            }
+        }
+        isLoadingMLBData = false
+    }
 
     /// Fetches Statcast data on card appear — batting for position players, pitching for pitchers.
     private func loadStatcast() async {
